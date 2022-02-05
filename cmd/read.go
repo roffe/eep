@@ -43,10 +43,18 @@ var readCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		xor, err := rootCmd.PersistentFlags().GetBytesHex(optXor)
+		if err != nil {
+			return err
+		}
 		switch args[0] {
 		case "-":
-			prettyPrintBin(bin)
+			prettyPrintBin(bin, xor[0])
 		default:
+			for i := 0; i < len(bin); i++ {
+				bin[i] = bin[i] ^ xor[0]
+			}
+
 			if err := writeFile(args[0], size, bin); err != nil {
 				return err
 			}
@@ -75,10 +83,10 @@ func writeFile(fname string, size uint16, bin []byte) error {
 	return nil
 }
 
-func prettyPrintBin(bin []byte) {
+func prettyPrintBin(bin []byte, xor byte) {
 	pp := 0
 	for _, b := range bin {
-		fmt.Printf("%02X ", b)
+		fmt.Printf("%02X ", b^xor)
 		pp++
 		if pp == 25 {
 			fmt.Println()
