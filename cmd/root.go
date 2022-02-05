@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
 const (
@@ -93,10 +93,11 @@ func getFlags() (uint8, uint16, uint8, string, error) {
 	return chip, size, org, port, nil
 }
 
-func waitAck(stream *serial.Port) error {
+func waitAck(stream serial.Port) error {
 	readBuffer := make([]byte, 1)
 	x := 0
 	for x < 5 {
+
 		n, err := stream.Read(readBuffer)
 		if err != nil {
 			return err

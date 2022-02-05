@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
 func init() {
@@ -92,7 +92,7 @@ func prettyPrintBin(bin []byte) {
 	fmt.Println()
 }
 
-func read(ctx context.Context, stream *serial.Port, chip uint8, size uint16, org uint8) ([]byte, error) {
+func read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8) ([]byte, error) {
 	if err := sendCMD(stream, opRead, chip, size, org); err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func read(ctx context.Context, stream *serial.Port, chip uint8, size uint16, org
 	return out, nil
 }
 
-func readBytes(ctx context.Context, stream *serial.Port, size uint16) ([]byte, error) {
+func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, error) {
 	out := make([]byte, size)
 	//buff := bytes.NewBuffer(nil)
 	readBuffer := make([]byte, 16)

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
-func sendCMD(stream *serial.Port, op string, chip uint8, size uint16, org uint8) error {
+func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8) error {
 	cmd := fmt.Sprintf("%s,%d,%d,%d\r", op, chip, size, org)
 	//log.Printf("sending: %q", cmd)
 	n, err := stream.Write([]byte(cmd))

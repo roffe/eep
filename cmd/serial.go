@@ -2,29 +2,35 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
-func openPort(port string) (*serial.Port, error) {
-	config := &serial.Config{
-		Name:        port,
-		Baud:        57600,
-		ReadTimeout: 1500 * time.Millisecond,
-		Parity:      serial.ParityNone,
-		Size:        8,
+func openPort(port string) (serial.Port, error) {
+
+	mode := &serial.Mode{
+		BaudRate: 57600,
+		DataBits: 8,
+		Parity:   serial.NoParity,
+		StopBits: serial.OneStopBit,
 	}
 
-	sr, err := serial.OpenPort(config)
+	sr, err := serial.Open(port, mode)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := sr.SetReadTimeout(1500 * time.Millisecond); err != nil {
 		return nil, err
 	}
 
 	if err := waitAck(sr); err != nil {
 		return nil, err
 	}
-	if err := sr.Flush(); err != nil {
+
+	if err := sr.ResetInputBuffer(); err != nil {
 		return nil, err
 	}
 

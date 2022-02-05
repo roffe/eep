@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
 func init() {
@@ -46,7 +46,7 @@ var eraseCmd = &cobra.Command{
 	},
 }
 
-func erase(ctx context.Context, stream *serial.Port, chip uint8, size uint16, org uint8) error {
+func erase(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8) error {
 	if err := sendCMD(stream, opErase, chip, 1, org); err != nil {
 		return err
 	}

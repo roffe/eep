@@ -11,7 +11,7 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/spf13/cobra"
-	"github.com/tarm/serial"
+	"go.bug.st/serial"
 )
 
 // writeCmd represents the write command
@@ -49,7 +49,7 @@ func init() {
 	rootCmd.AddCommand(writeCmd)
 }
 
-func write(ctx context.Context, stream *serial.Port, chip uint8, size uint16, org uint8, data []byte) error {
+func write(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, data []byte) error {
 	if err := sendCMD(stream, opWrite, chip, size, org); err != nil {
 		return err
 	}
