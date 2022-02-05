@@ -1,0 +1,6 @@
+tmp
+tmp/*
+*.bin
+arduino/build
+arduino/build/*
+c_cpp_properties.json

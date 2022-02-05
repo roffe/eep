@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	optChip = "chip"
-	optSize = "size"
-	optOrg  = "org"
-	optPort = "port"
-	optXor  = "xor"
+	optChip  = "chip"
+	optSize  = "size"
+	optOrg   = "org"
+	optPort  = "port"
+	optXor   = "xor"
+	optErase = "erase"
 
 	defaultChip = 66
 	defaultSize = 512
@@ -36,9 +37,6 @@ var rootCmd = &cobra.Command{
 	Short:        "eeprom tool",
 	Long:         `a CLI to interface with the arduino eeprom programmer`,
 	SilenceUsage: true,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -51,12 +49,6 @@ func Execute(ctx context.Context) {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.eep.yaml)")
-
 	pf := rootCmd.PersistentFlags()
 
 	pf.Uint8P(optChip, "c", defaultChip, "chip type")
@@ -64,12 +56,12 @@ func init() {
 	pf.Uint8P(optOrg, "o", defaultOrg, "chip org")
 	pf.StringP(optPort, "p", defaultPort, "com port")
 	pf.BytesHexP(optXor, "x", []byte{0x00}, "xor output")
+	pf.BoolP(optErase, "e", false, "erase before write")
 
 	//cobra.MarkFlagRequired(pf, optChip)
 	//cobra.MarkFlagRequired(pf, optSize)
 	//cobra.MarkFlagRequired(pf, optOrg)
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
+
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
