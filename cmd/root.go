@@ -56,7 +56,7 @@ func init() {
 	pf.Uint8P(optOrg, "o", defaultOrg, "chip org")
 	pf.StringP(optPort, "p", defaultPort, "com port")
 	pf.BytesHexP(optXor, "x", []byte{0x00}, "xor output")
-	pf.BoolP(optErase, "e", false, "erase before write")
+	pf.BoolP(optErase, "e", false, "erase before write (default false")
 
 	//cobra.MarkFlagRequired(pf, optChip)
 	//cobra.MarkFlagRequired(pf, optSize)
