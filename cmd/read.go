@@ -141,35 +141,6 @@ func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, er
 				break inner
 			}
 		}
-
-		/*
-			outer:
-				for _, b := range readBuffer[:n] {
-					buff.WriteByte(b)
-					if b == 0xA || b == 0x0D {
-						if buff.Len() == 1 {
-							buff.Reset()
-							continue
-						}
-
-							str := strings.ReplaceAll(buff.String(), " ", "")
-							str = strings.ReplaceAll(str, "\r", "")
-							bb, err := hex.DecodeString(str)
-							if err != nil {
-								return nil, err
-							}
-
-								for _, db := range buff.Bytes() {
-							out[pos] = db
-							pos++
-							if uint16(pos) == size {
-								break outer
-							}
-						}
-						buff.Reset()
-					}
-				}
-		*/
 	}
 
 	return out, nil

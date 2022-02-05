@@ -1,5 +1,7 @@
 # Arduino EEPROM programmer CLI for Windows, Linux, MacOs
 
+![unit](unit.jpg)
+
 ## Hardware
 
 * Arduino UNO
@@ -34,4 +36,6 @@ The red cable on the SOP8 clamp indicates pin 1 and should be orinted to the cor
     | O               |
      ¯ | ¯ | ¯ | ¯ | ¯
        1   2   3   4
+
+
 ## [Docs](docs/eep.md)
