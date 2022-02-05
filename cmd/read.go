@@ -79,7 +79,7 @@ func writeFile(fname string, size uint16, bin []byte) error {
 		log.Printf("/!\\ only wrote %d out of %d requested bytes", n, size)
 	}
 
-	log.Printf("read %d bytes to %s", n, fname)
+	log.Printf("wrote %d bytes to %s", n, fname)
 	return nil
 }
 
