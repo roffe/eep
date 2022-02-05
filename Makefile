@@ -1,2 +1,2 @@
 release:
-        goreleaser release --rm-dist
+	goreleaser release --rm-dist
