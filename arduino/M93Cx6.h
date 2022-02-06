@@ -2,7 +2,7 @@
 #define M93Cx6_h
 
 //  Uncomment the following line to enable delay between pin toggles
-#define PIN_DELAY_TIME 60
+#define PIN_DELAY_TIME 40
 
 //  Devices Supported
 #define M93C46 46
@@ -25,7 +25,7 @@
 #define OP_WRAL B10001
 
 //  Time Out (ms) for Write/Erase Check Status
-#define CHECK_STATUS_TIMEOUT 50
+#define CHECK_STATUS_TIMEOUT 40
 
 #if (ARDUINO >= 100)
 #include "Arduino.h"

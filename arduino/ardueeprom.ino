@@ -19,8 +19,6 @@
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN);
 
-uint8_t incomingByte;
-
 int chipAddr = 0x08;
 int orgAddr = 0x10;
 int sizeAddr = 0x20;
@@ -34,6 +32,7 @@ void setup()
     Serial.begin(57600);
 
 #ifdef USE_EEPROM
+    // load settings from eeprom
     loadSettings();
 #endif
 
@@ -51,12 +50,9 @@ void loop()
 }
 
 #ifdef USE_EEPROM
-// load settings from eeprom
 void loadSettings()
 {
-    uint8_t check;
-    EEPROM.get(0x00, check);
-    if (check == 0x20)
+    if (EEPROM.read(0x00) == 0x20)
     {
         cfgChip = EEPROM.read(chipAddr);
         EEPROM.get(sizeAddr, cfgSize);
@@ -67,7 +63,7 @@ void loadSettings()
 }
 #endif
 
-static uint8_t buffLength = 0;     // number of characters currently in the buffer
+static uint8_t bufferLength = 0;   // number of characters currently in the buffer
 const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
 static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
 
@@ -79,31 +75,31 @@ void handleSerial()
         if ((c == '\r') || (c == '\n'))
         {
             // end-of-line received
-            if (buffLength > 0)
+            if (bufferLength > 0)
             {
                 handleCmd(buffer);
             }
-            buffLength = 0;
+            bufferLength = 0;
+            return;
         }
-        else if (c == 127) // handle backspace during command input
-        {
 
-            if (buffLength > 0)
+        if (c == 127) // handle backspace during command input
+        {
+            if (bufferLength > 0)
             {
-                buffLength--;
+                bufferLength--;
             }
+            return;
+        }
+
+        if (bufferLength < BUFF_SIZE)
+        {
+            buffer[bufferLength++] = c; // append the received character to the array
+            buffer[bufferLength] = 0;   // append the null terminator
         }
         else
         {
-            if (buffLength < BUFF_SIZE)
-            {
-                buffer[buffLength++] = c; // append the received character to the array
-                buffer[buffLength] = 0;   // append the null terminator
-            }
-            else
-            {
-                Serial.write('\a');
-            }
+            Serial.write('\a');
         }
     }
 }
@@ -133,7 +129,7 @@ void handleCmd(char *msg)
         return;
     }
 
-    if (buffLength > 4) // long command with set options inline
+    if (bufferLength > 4) // long command with set options inline
     {
         parse(msg);
     }
