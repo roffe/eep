@@ -50,7 +50,7 @@ func write(ctx context.Context, stream serial.Port, chip uint8, size uint16, org
 		return err
 	}
 
-	if err := waitAck(stream); err != nil {
+	if err := waitAck(stream, '\f'); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func write(ctx context.Context, stream serial.Port, chip uint8, size uint16, org
 		if _, err := stream.Write([]byte{b}); err != nil {
 			return err
 		}
-		time.Sleep(20 * time.Microsecond)
+		time.Sleep(50 * time.Microsecond)
 		bar.Increment()
 	}
 

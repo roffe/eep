@@ -36,7 +36,7 @@ var eraseCmd = &cobra.Command{
 		if err := erase(ctx, sr, chip, size, org); err != nil {
 			log.Fatal(err)
 		}
-		if err := waitAck(sr); err != nil {
+		if err := waitAck(sr, '\a'); err != nil {
 			return err
 		}
 

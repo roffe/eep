@@ -85,10 +85,10 @@ func getFlags() (uint8, uint16, uint8, string, error) {
 	return chip, size, org, port, nil
 }
 
-func waitAck(stream serial.Port) error {
+func waitAck(stream serial.Port, char byte) error {
 	readBuffer := make([]byte, 1)
 	x := 0
-	for x < 5 {
+	for x < 3 {
 
 		n, err := stream.Read(readBuffer)
 		if err != nil {
@@ -98,7 +98,8 @@ func waitAck(stream serial.Port) error {
 			continue
 			//return errors.New("got no ack")
 		}
-		if readBuffer[0] == '\f' {
+		if readBuffer[0] == char {
+			stream.ResetInputBuffer()
 			return nil
 		} else {
 			//log.Printf("%q", readBuffer[0])

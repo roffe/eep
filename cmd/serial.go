@@ -25,7 +25,7 @@ func openPort(port string) (serial.Port, error) {
 		return nil, err
 	}
 
-	if err := waitAck(sr); err != nil {
+	if err := waitAck(sr, '\f'); err != nil {
 		return nil, err
 	}
 

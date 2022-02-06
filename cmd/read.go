@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
+	"unicode/utf16"
 
 	"github.com/spf13/cobra"
 	"go.bug.st/serial"
@@ -49,7 +53,7 @@ var readCmd = &cobra.Command{
 		}
 		switch args[0] {
 		case "-":
-			prettyPrintBin(bin, xor[0])
+			prettyPrintBin(bin, org, xor[0])
 		default:
 			for i := 0; i < len(bin); i++ {
 				bin[i] = bin[i] ^ xor[0]
@@ -83,16 +87,46 @@ func writeFile(fname string, size uint16, bin []byte) error {
 	return nil
 }
 
-func prettyPrintBin(bin []byte, xor byte) {
+func prettyPrintBin(bin []byte, org uint8, xor byte) {
 	pp := 0
-	for _, b := range bin {
-		fmt.Printf("%02X ", b^xor)
-		pp++
-		if pp == 25 {
-			fmt.Println()
-			pp = 0
+	switch org {
+	case 8:
+		for _, b := range bin {
+			fmt.Printf("%02X ", b^xor)
+			pp++
+			if pp == 25 {
+				fmt.Println()
+				pp = 0
+			}
 		}
+	case 16:
+		r := bytes.NewReader(bin)
+		var chars []uint16
+	outer:
+		for {
+			var c uint16
+			if err := binary.Read(r, binary.BigEndian, &c); err != nil {
+				if err == io.EOF {
+					break outer
+				}
+				panic(err)
+			}
+			chars = append(chars, c)
+		}
+		runes := utf16.Decode(chars)
+		for _, rr := range runes {
+			fmt.Printf("%s ", string(rr))
+			pp++
+			if pp == 25 {
+				fmt.Println()
+				pp = 0
+			}
+		}
+
+	default:
+		panic("unknown org")
 	}
+
 	fmt.Println()
 }
 
