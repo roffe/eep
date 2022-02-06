@@ -39,7 +39,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        ; // wait for serial port to connect. Needed for native USB
+        delayMicroseconds(10); // wait for serial port to connect. Needed for native USB
     }
     Serial.print("\f");
 }
@@ -72,6 +72,12 @@ void handleSerial()
     if (Serial.available())
     {
         char c = Serial.read();
+        if ((c == '\r' && bufferLength == 0))
+        {
+            help();
+            return;
+        }
+
         if ((c == '\r') || (c == '\n'))
         {
             // end-of-line received
@@ -133,6 +139,7 @@ void handleCmd(char *msg)
     {
         parse(msg);
     }
+
     ledOn();
     ep.powerUp();
 
@@ -178,36 +185,28 @@ void parse(char *msg)
         Serial.println("\ainvalid size");
         return;
     }
-    if (cfgChip == 0)
-    {
-        Serial.println("\ainvalid chip");
-        return;
-    }
-    if (cfgOrg == 0)
-    {
-        Serial.println("\ainvalid org");
-        return;
-    }
 
-    if (!setChip(cfgChip))
+    if (!setChip())
     {
         return;
     }
 
-    if (!setOrg(cfgOrg))
+    if (!setOrg())
     {
         return;
     }
 
 #ifdef USE_EEPROM
+    EEPROM.put(chipAddr, cfgChip);
+    EEPROM.put(orgAddr, cfgOrg);
     EEPROM.put(sizeAddr, cfgSize);
     EEPROM.put(0x00, 0x20); // if this is not 0x20 settings will not be loaded from eeprom
 #endif
 }
 
-bool setChip(uint8_t chip)
+bool setChip()
 {
-    switch (chip)
+    switch (cfgChip)
     {
     case 46:
         ep.setChip(M93C46);
@@ -225,20 +224,16 @@ bool setChip(uint8_t chip)
         ep.setChip(M93C86);
         break;
     default:
-        Serial.println("\ainvalid CHIP");
+        Serial.println("\ainvalid chip");
         return false;
     }
-
-#ifdef USE_EEPROM
-    EEPROM.put(chipAddr, chip);
-#endif
 
     return true;
 }
 
-bool setOrg(uint8_t org)
+bool setOrg()
 {
-    switch (org)
+    switch (cfgOrg)
     {
     case 8:
         ep.setOrg(ORG_8);
@@ -247,13 +242,9 @@ bool setOrg(uint8_t org)
         ep.setOrg(ORG_16);
         break;
     default:
-        Serial.println("\ainvalid ORG");
+        Serial.println("\ainvalid org");
         return false;
     }
-
-#ifdef USE_EEPROM
-    EEPROM.put(orgAddr, org);
-#endif
 
     return true;
 }
