@@ -111,7 +111,7 @@ func read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org 
 func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, error) {
 	out := make([]byte, size)
 	//buff := bytes.NewBuffer(nil)
-	readBuffer := make([]byte, 16)
+	readBuffer := make([]byte, 32)
 	pos := 0
 	lastRead := time.Now()
 
