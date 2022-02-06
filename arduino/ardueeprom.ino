@@ -1,8 +1,15 @@
+#ifndef USE_EEPROM
+#define USE_EEPROM
+#endif
+
 #include <Arduino.h>
+
+#ifdef USE_EEPROM
 #include <EEPROM.h>
+#endif
+
 #include "M93Cx6.h"
 
-#define USE_EEPROM true
 #define PWR_PIN 9
 #define CS_PIN 10
 #define SK_PIN 7
@@ -19,17 +26,16 @@ int orgAddr = 0x10;
 int sizeAddr = 0x20;
 
 static uint8_t cfgChip;
-static uint16_t size;
-static uint8_t org;
+static uint16_t cfgSize;
+static uint8_t cfgOrg;
 
 void setup()
 {
     Serial.begin(57600);
 
-    if (USE_EEPROM)
-    {
-        loadSettings();
-    }
+#ifdef USE_EEPROM
+    loadSettings();
+#endif
 
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
@@ -44,6 +50,8 @@ void loop()
     handleSerial();
 }
 
+#ifdef USE_EEPROM
+// load settings from eeprom
 void loadSettings()
 {
     uint8_t check;
@@ -51,37 +59,39 @@ void loadSettings()
     if (check == 0x20)
     {
         cfgChip = EEPROM.read(chipAddr);
-        EEPROM.get(sizeAddr, size);
-        org = EEPROM.read(orgAddr);
+        EEPROM.get(sizeAddr, cfgSize);
+        cfgOrg = EEPROM.read(orgAddr);
         ep.setChip(cfgChip);
-        ep.setOrg(org);
+        ep.setOrg(cfgOrg);
     }
 }
+#endif
 
-static int buffLength = 0; // number of characters currently in the buffer
+static uint8_t buffLength = 0;     // number of characters currently in the buffer
+const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
+static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
 
 void handleSerial()
 {
-    const int BUFF_SIZE = 32;          // make it big enough to hold your longest command
-    static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
-
     if (Serial.available())
     {
         char c = Serial.read();
-        // Serial.println(c, HEX);
-
         if ((c == '\r') || (c == '\n'))
         {
             // end-of-line received
             if (buffLength > 0)
             {
-                handleReceivedMessage(buffer);
+                handleCmd(buffer);
             }
             buffLength = 0;
         }
-        else if (c == 127) // handle backspace during command parsing mode
+        else if (c == 127) // handle backspace during command input
         {
-            buffLength--;
+
+            if (buffLength > 0)
+            {
+                buffLength--;
+            }
         }
         else
         {
@@ -98,9 +108,7 @@ void handleSerial()
     }
 }
 
-char *cmd;
-
-void handleReceivedMessage(char *msg)
+void handleCmd(char *msg)
 {
     switch (msg[0])
     {
@@ -108,7 +116,7 @@ void handleReceivedMessage(char *msg)
         help();
         return;
     case 's':
-        parseMsg(msg);
+        parse(msg);
         Serial.println();
         return;
     case 'w':
@@ -127,11 +135,10 @@ void handleReceivedMessage(char *msg)
 
     if (buffLength > 4) // long command with set options inline
     {
-        parseMsg(msg);
+        parse(msg);
     }
-
+    ledOn();
     ep.powerUp();
-    delayMicroseconds(100);
 
     switch (msg[0])
     {
@@ -148,11 +155,16 @@ void handleReceivedMessage(char *msg)
         erase();
         break;
     }
+
+    delayMicroseconds(50);
+    ep.powerDown();
+    ledOff();
 }
 
-void parseMsg(char *msg)
+static char *cmd;
+
+void parse(char *msg)
 {
-    // Serial.println("parse");
     char *pos;
     cmd = strtok(msg, ",");
 
@@ -160,12 +172,12 @@ void parseMsg(char *msg)
     cfgChip = atoi(pos);
 
     pos = strtok(NULL, ",");
-    size = atoi(pos);
+    cfgSize = atoi(pos);
 
     pos = strtok(NULL, ",");
-    org = atoi(pos);
+    cfgOrg = atoi(pos);
 
-    if (size == 0)
+    if (cfgSize == 0)
     {
         Serial.println("\ainvalid size");
         return;
@@ -175,7 +187,7 @@ void parseMsg(char *msg)
         Serial.println("\ainvalid chip");
         return;
     }
-    if (org == 0)
+    if (cfgOrg == 0)
     {
         Serial.println("\ainvalid org");
         return;
@@ -186,86 +198,75 @@ void parseMsg(char *msg)
         return;
     }
 
-    if (!setOrg(org))
+    if (!setOrg(cfgOrg))
     {
         return;
     }
 
-    if (USE_EEPROM)
-    {
-        EEPROM.put(sizeAddr, size);
-        EEPROM.put(0x00, 0x20); // if this is not 0x20 settings will not be loaded from eeprom
-    }
+#ifdef USE_EEPROM
+    EEPROM.put(sizeAddr, cfgSize);
+    EEPROM.put(0x00, 0x20); // if this is not 0x20 settings will not be loaded from eeprom
+#endif
 }
 
 bool setChip(uint8_t chip)
 {
-    bool ok = false;
     switch (chip)
     {
     case 46:
         ep.setChip(M93C46);
-        ok = true;
         break;
     case 56:
         ep.setChip(M93C56);
-        ok = true;
         break;
     case 66:
         ep.setChip(M93C66);
-        ok = true;
         break;
     case 76:
         ep.setChip(M93C76);
-        ok = true;
         break;
     case 86:
         ep.setChip(M93C86);
-        ok = true;
         break;
     default:
         Serial.println("\ainvalid CHIP");
         return false;
     }
-    if (!ok)
-    {
-        return false;
-    }
+
+#ifdef USE_EEPROM
     EEPROM.put(chipAddr, chip);
+#endif
+
     return true;
 }
 
 bool setOrg(uint8_t org)
 {
-    bool ok = false;
     switch (org)
     {
     case 8:
         ep.setOrg(ORG_8);
-        ok = true;
         break;
     case 16:
         ep.setOrg(ORG_16);
-        ok = true;
         break;
     default:
         Serial.println("\ainvalid ORG");
         return false;
     }
-    if (!ok)
-    {
-        return false;
-    }
 
+#ifdef USE_EEPROM
     EEPROM.put(orgAddr, org);
+#endif
+
     return true;
 }
 
 void help()
 {
     Serial.println("--- eep ---");
-    Serial.println("s,<chip>,<size>,<org> - Set eeprom options");
-    Serial.println("? - Print current settings");
+    Serial.println("s,<chip>,<size>,<org> - Set eeprom configuration");
+    Serial.println("? - Print current configuration");
     Serial.println("r - Read eeprom");
     Serial.println("w - Initiate write mode");
     Serial.println("e - Erase eeprom");
@@ -279,96 +280,73 @@ void settings()
     Serial.print("chip: ");
     Serial.println(cfgChip);
     Serial.print("size: ");
-    Serial.println(size);
+    Serial.println(cfgSize);
     Serial.print("org: ");
-    Serial.println(org);
+    Serial.println(cfgOrg);
 }
 
 void read()
 {
-    uint8_t c;
-    ledOn();
-    for (size_t i = 0; i < size; i++)
+    for (uint16_t i = 0; i < cfgSize; i++)
     {
-        c = ep.read(i);
-        Serial.write(c);
+        Serial.write(ep.read(i));
     }
     Serial.print("\r\n");
-    ledOff();
-    ep.powerDown();
 }
+
+static unsigned long lastData;
 
 void write()
 {
-    uint8_t c;
-    unsigned long lastData;
     lastData = millis();
-
     Serial.write('\f');
-    ledOn();
     ep.writeEnable();
-    for (size_t i = 0; i < size; i++)
+    for (uint16_t i = 0; i < cfgSize; i++)
     {
         while (Serial.available() == 0)
         {
             if ((millis() - lastData) > 2000)
             {
                 ep.writeDisable();
-                ep.powerDown();
-                ledOff();
                 Serial.println("\adata read timeout");
                 return;
             }
         }
-
-        c = Serial.read();
-        ep.write(i, c);
+        ep.write(i, Serial.read());
         lastData = millis();
     }
     ep.writeDisable();
-    ep.powerDown();
-    ledOff();
     Serial.print("\fwrite done\r\n");
 }
 
 void erase()
 {
-    ledOn();
-    ep.powerUp();
-    delayMicroseconds(50);
     ep.writeEnable();
-    delayMicroseconds(50);
     ep.eraseAll();
-    delayMicroseconds(50);
     ep.writeDisable();
-    delayMicroseconds(50);
-    ep.powerDown();
-    ledOff();
     Serial.write('\f');
 }
 
+static uint8_t linePos;
 void printBin()
 {
-    uint8_t pos = 0;
-    uint8_t c;
+    linePos = 0;
     char buf[3];
     ledOn();
     Serial.println("--- Hex dump ---");
-    for (size_t i = 0; i < size; i++)
+    for (uint16_t i = 0; i < cfgSize; i++)
     {
-        c = ep.read(i);
-        sprintf(buf, "%02X ", c);
+        sprintf(buf, "%02X ", ep.read(i));
         Serial.print(buf);
-        pos++;
-        if (pos == 25)
+        linePos++;
+        if (linePos == 24)
         {
             Serial.println();
-            pos = 0;
+            linePos = 0;
         }
     }
-    Serial.print("\r\n");
+    Serial.println();
     ledOff();
-    ep.powerDown();
 }
 
 void ledOn()

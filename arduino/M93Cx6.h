@@ -39,7 +39,7 @@ public:
     void setChip(uint8_t);         //  Select which chip (M93C46, M93C56, etc)
     void setOrg(uint8_t);          //  Set Data Organisation (ORG_8 or ORG_16)
     void setCheckStatus(uint8_t);  //  Check write status
-    uint16_t read(uint16_t);       //  Read value at the address
+    uint8_t read(uint16_t);        //  Read value at the address
     void write(uint16_t, uint8_t); //  Write value to address
     void writeAll(uint8_t);        //  Write All address with value
     void erase(uint8_t);           //  Erase address

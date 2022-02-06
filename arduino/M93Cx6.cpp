@@ -96,6 +96,7 @@ void M93Cx6::powerUp()
         pinLow(_csPin);
         PIN_DELAY;
         pinHigh(_pwrPin);
+        PIN_DELAY;
     }
 }
 
@@ -112,16 +113,15 @@ void M93Cx6::restart()
     powerUp();
 }
 
-uint16_t M93Cx6::read(uint16_t address)
+uint8_t M93Cx6::read(uint16_t address)
 {
-    uint16_t data;
+    uint8_t data;
     pinHigh(_csPin);
     shiftOut(OP_READ, 3);
     shiftOut(address, _addressLength);
     data = shiftIn(_dataLength);
     pinLow(_csPin);
     PIN_DELAY;
-
     return data;
 }
 
