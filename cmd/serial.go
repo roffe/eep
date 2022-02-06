@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -32,12 +31,6 @@ func openPort(port string) (serial.Port, error) {
 
 	if err := sr.ResetInputBuffer(); err != nil {
 		return nil, err
-	}
-
-	_, err = sr.Write([]byte{'\r', '\n'}) // empty buffer
-	if err != nil {
-		sr.Close()
-		return nil, fmt.Errorf("failed to init adapter: %v", err)
 	}
 
 	return sr, nil
