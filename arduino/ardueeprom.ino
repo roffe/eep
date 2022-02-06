@@ -63,7 +63,7 @@ void loadSettings()
 }
 #endif
 
-static uint8_t bufferLength = 0;   // number of characters currently in the buffer
+static uint8_t bufferLength;       // number of characters currently in the buffer
 const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
 static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
 
@@ -129,7 +129,7 @@ void handleCmd(char *msg)
         return;
     }
 
-    if (bufferLength > 4) // long command with set options inline
+    if (bufferLength > 8) // parse long command with set options inline
     {
         parse(msg);
     }
