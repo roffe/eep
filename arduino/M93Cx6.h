@@ -2,7 +2,7 @@
 #define M93Cx6_h
 
 //  Uncomment the following line to enable delay between pin toggles
-#define PIN_DELAY_TIME 40
+#define PIN_DELAY_TIME 50
 
 //  Devices Supported
 #define M93C46 46
@@ -25,7 +25,7 @@
 #define OP_WRAL B10001
 
 //  Time Out (ms) for Write/Erase Check Status
-#define CHECK_STATUS_TIMEOUT 40
+#define CHECK_STATUS_TIMEOUT 50
 
 #if (ARDUINO >= 100)
 #include "Arduino.h"
@@ -36,17 +36,17 @@ class M93Cx6
 public:
     M93Cx6(uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin);
     M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin);
-    void setChip(uint8_t);         //  Select which chip (M93C46, M93C56, etc)
-    void setOrg(uint8_t);          //  Set Data Organisation (ORG_8 or ORG_16)
-    void setCheckStatus(uint8_t);  //  Check write status
-    uint8_t read(uint16_t);        //  Read value at the address
-    void write(uint16_t, uint8_t); //  Write value to address
-    void writeAll(uint8_t);        //  Write All address with value
-    void erase(uint8_t);           //  Erase address
-    void eraseAll();               //  Erase the whole chip
-    void writeEnable();            //  Enable Write/Erase operations
-    void writeDisable();           //  Disable Write/Erase operations
-    void powerUp();                //  Power Up the chip if option is enabled
+    void setChip(uint8_t);          //  Select which chip (M93C46, M93C56, etc)
+    void setOrg(uint8_t);           //  Set Data Organisation (ORG_8 or ORG_16)
+    void setCheckStatus(uint8_t);   //  Check write status
+    uint16_t read(uint16_t);        //  Read value at the address
+    void write(uint16_t, uint16_t); //  Write value to address
+    void writeAll(uint8_t);         //  Write All address with value
+    void erase(uint8_t);            //  Erase address
+    void eraseAll();                //  Erase the whole chip
+    void writeEnable();             //  Enable Write/Erase operations
+    void writeDisable();            //  Disable Write/Erase operations
+    void powerUp();                 //  Power Up the chip if option is enabled
     void powerDown();
     void restart();
 
@@ -54,7 +54,7 @@ private:
     uint8_t _dataLength, _addressLength;
     uint8_t _pwrPin, _csPin, _skPin, _diPin, _doPin, _orgPin;
     uint8_t _org, _chip, _checkStatus;
-    uint16_t shiftIn(uint8_t length);
+    uint16_t shiftIn(uint16_t length);
     void shiftOut(uint16_t data, uint8_t length);
     uint8_t checkStatus();
     uint8_t pinMask(uint8_t);

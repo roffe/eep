@@ -19,9 +19,11 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     _diPin = diPin;
     _doPin = doPin;
     _orgPin = orgPin;
-    _org = ORG_16;
-    _chip = M93C46;
-    _checkStatus = 1;
+    //_addressLength = 9;
+    //_dataLength = 8;
+    //_org = ORG_8;
+    //_chip = M93C66;
+    //_checkStatus = 1;
 
     if (_pwrPin != 0xFF)
         pinMode(_pwrPin, OUTPUT);
@@ -31,6 +33,7 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     pinMode(_skPin, OUTPUT);
     pinMode(_diPin, INPUT);
     pinMode(_doPin, OUTPUT);
+
     if (_orgPin != 0xFF)
         pinMode(_orgPin, OUTPUT);
 
@@ -38,8 +41,8 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     pinLow(_skPin);
     pinLow(_csPin);
 
-    setChip(M93C46);
-    setOrg(ORG_16);
+    setChip(M93C66);
+    setOrg(ORG_8);
 }
 
 void M93Cx6::setChip(uint8_t chip)
@@ -73,13 +76,15 @@ void M93Cx6::setOrg(uint8_t org)
         _org = org;
         _dataLength = 8;
         setChip(_chip);
-        /*if (_orgPin != 0xFF) */ pinLow(_orgPin);
+        if (_orgPin != 0xFF)
+            pinLow(_orgPin);
         break;
     case ORG_16:
         _org = org;
         _dataLength = 16;
         setChip(_chip);
-        /*if (_orgPin != 0xFF) */ pinHigh(_orgPin);
+        if (_orgPin != 0xFF)
+            pinHigh(_orgPin);
         break;
     }
 }
@@ -113,9 +118,9 @@ void M93Cx6::restart()
     powerUp();
 }
 
-uint8_t M93Cx6::read(uint16_t address)
+uint16_t M93Cx6::read(uint16_t address)
 {
-    uint8_t data;
+    uint16_t data;
     pinHigh(_csPin);
     shiftOut(OP_READ, 3);
     shiftOut(address, _addressLength);
@@ -125,7 +130,7 @@ uint8_t M93Cx6::read(uint16_t address)
     return data;
 }
 
-void M93Cx6::write(uint16_t address, uint8_t data)
+void M93Cx6::write(uint16_t address, uint16_t data)
 {
     pinHigh(_csPin);
     shiftOut(OP_WRITE, 3);
@@ -183,7 +188,7 @@ void M93Cx6::writeDisable()
     PIN_DELAY;
 }
 
-uint16_t M93Cx6::shiftIn(uint8_t length)
+uint16_t M93Cx6::shiftIn(uint16_t length)
 {
     uint16_t value = 0;
     for (int i = 0; i < length; i++)
@@ -205,6 +210,7 @@ void M93Cx6::shiftOut(uint16_t data, uint8_t length)
         ((data & (1 << ((length - 1) - i))) ? pinHigh(_doPin) : pinLow(_doPin));
         PIN_DELAY;
         pinHigh(_skPin);
+        PIN_DELAY;
         pinLow(_skPin);
     }
 }

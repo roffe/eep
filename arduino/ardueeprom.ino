@@ -39,7 +39,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        delayMicroseconds(10); // wait for serial port to connect. Needed for native USB
+        ; // wait for serial port to connect. Needed for native USB
     }
     Serial.print("\f");
 }
@@ -125,6 +125,7 @@ void handleCmd(char *msg)
     case 'r':
     case 'e':
     case 'p':
+    case 'x':
         break;
     case '?':
         settings();
@@ -274,11 +275,22 @@ void settings()
 
 void read()
 {
+    uint16_t c = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        Serial.write(ep.read(i));
+        c = ep.read(i);
+        switch (cfgOrg)
+        {
+        case 8:
+            Serial.write(c);
+            break;
+        case 16:
+            Serial.write(c >> 8);
+            Serial.write(c & 0xFF);
+            break;
+        }
     }
-    Serial.print("\r\n");
+    Serial.println();
 }
 
 static unsigned long lastData;
@@ -288,6 +300,9 @@ void write()
     lastData = millis();
     Serial.write('\f');
     ep.writeEnable();
+    uint8_t buff[2];
+    uint8_t pos = 0;
+
     for (uint16_t i = 0; i < cfgSize; i++)
     {
         while (Serial.available() == 0)
@@ -296,14 +311,34 @@ void write()
             {
                 ep.writeDisable();
                 Serial.println("\adata read timeout");
-                return;
+                goto outer;
+                // return;
             }
         }
-        ep.write(i, Serial.read());
+        switch (cfgOrg)
+        {
+        case 8:
+            ep.write(i, Serial.read());
+            break;
+
+        case 16:
+            if (pos == 2)
+            {
+                uint16_t wd = ((uint16_t)buff[1] << 8) | buff[0];
+                ep.write(i, wd);
+                pos = 0;
+                break;
+            }
+            buff[pos++] = Serial.read();
+            i--;
+            break;
+        }
+
         lastData = millis();
     }
+outer:
     ep.writeDisable();
-    Serial.print("\fwrite done\r\n");
+    Serial.println("\r\n--- write done ---");
 }
 
 void erase()
@@ -311,19 +346,30 @@ void erase()
     ep.writeEnable();
     ep.eraseAll();
     ep.writeDisable();
-    Serial.write('\f');
+    Serial.println("\aeeprom erased");
 }
 
 static uint8_t linePos;
 void printBin()
 {
     linePos = 0;
-    char buf[3];
+    char buf[4];
     ledOn();
     Serial.println("--- Hex dump ---");
+    uint16_t c = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        sprintf(buf, "%02X ", ep.read(i));
+        switch (cfgOrg)
+        {
+        case 8:
+            c = ep.read(i);
+            sprintf(buf, "%02X ", c);
+            break;
+        case 16:
+            c = ep.read(i);
+            sprintf(buf, "%02X%02X ", c >> 8, c & 0xFF);
+            break;
+        }
         Serial.print(buf);
         linePos++;
         if (linePos == 24)

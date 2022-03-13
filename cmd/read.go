@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/spf13/cobra"
 	"go.bug.st/serial"
 )
@@ -54,6 +56,8 @@ var readCmd = &cobra.Command{
 		switch args[0] {
 		case "-":
 			prettyPrintBin(bin, org, xor[0])
+			md := md5.Sum(bin)
+			fmt.Printf("%X\n", md)
 		default:
 			for i := 0; i < len(bin); i++ {
 				bin[i] = bin[i] ^ xor[0]
@@ -115,7 +119,7 @@ func prettyPrintBin(bin []byte, org uint8, xor byte) {
 		}
 		runes := utf16.Decode(chars)
 		for _, rr := range runes {
-			fmt.Printf("%s ", string(rr))
+			fmt.Printf("%x ", string(rr))
 			pp++
 			if pp == 25 {
 				fmt.Println()
@@ -148,7 +152,7 @@ func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, er
 	readBuffer := make([]byte, 32)
 	pos := 0
 	lastRead := time.Now()
-
+	bar := pb.StartNew(int(size))
 	for pos < int(size) {
 		select {
 		case <-ctx.Done():
@@ -175,7 +179,8 @@ func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, er
 				break inner
 			}
 		}
+		bar.Increment()
 	}
-
+	bar.Finish()
 	return out, nil
 }

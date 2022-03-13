@@ -3,6 +3,8 @@
 ![unit](unit.jpg)
 (image has external led on pin13 & push button from other project hooked up)
 
+    /!\ ORG_16 is not working at the moment, _only__ ORG_8
+
 ## Hardware
 
 * Arduino UNO
