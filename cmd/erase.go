@@ -36,9 +36,6 @@ var eraseCmd = &cobra.Command{
 		if err := erase(ctx, sr, chip, size, org); err != nil {
 			log.Fatal(err)
 		}
-		if err := waitAck(sr, '\a'); err != nil {
-			return err
-		}
 
 		log.Println("eeprom erased")
 
@@ -48,6 +45,9 @@ var eraseCmd = &cobra.Command{
 
 func erase(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8) error {
 	if err := sendCMD(stream, opErase, chip, 1, org); err != nil {
+		return err
+	}
+	if err := waitAck(stream, '\a'); err != nil {
 		return err
 	}
 	return nil

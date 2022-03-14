@@ -39,9 +39,9 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        ; // wait for serial port to connect. Needed for native USB
+        delay(5); // wait for serial port to connect. Needed for native USB
     }
-    Serial.print("\f");
+    Serial.println();
 }
 
 void loop()
@@ -100,8 +100,8 @@ void handleSerial()
 
         if (bufferLength < BUFF_SIZE)
         {
-            buffer[bufferLength++] = c; // append the received character to the array
-            buffer[bufferLength] = 0;   // append the null terminator
+            buffer[bufferLength++] = c;  // append the received character to the array
+            buffer[bufferLength] = 0x00; // append the null terminator
         }
         else
         {
@@ -275,6 +275,7 @@ void settings()
 
 void read()
 {
+    delay(10);
     uint16_t c = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
@@ -298,11 +299,11 @@ static unsigned long lastData;
 void write()
 {
     lastData = millis();
-    Serial.write('\f');
     ep.writeEnable();
     uint8_t buff[2];
     uint8_t pos = 0;
 
+    Serial.write('\f');
     for (uint16_t i = 0; i < cfgSize; i++)
     {
         while (Serial.available() == 0)
@@ -311,8 +312,7 @@ void write()
             {
                 ep.writeDisable();
                 Serial.println("\adata read timeout");
-                goto outer;
-                // return;
+                return;
             }
         }
         switch (cfgOrg)
@@ -335,8 +335,8 @@ void write()
         }
 
         lastData = millis();
+        Serial.print("\f");
     }
-outer:
     ep.writeDisable();
     Serial.println("\r\n--- write done ---");
 }

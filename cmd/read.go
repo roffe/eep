@@ -160,14 +160,15 @@ func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, er
 		default:
 		}
 		if time.Since(lastRead) > 5*time.Second {
+			log.Println("read timeout")
 			return nil, errors.New("timeout reading eeprom")
 		}
 		n, err := stream.Read(readBuffer)
 		if err != nil {
+			log.Println("error reading")
 			return nil, err
 		}
 		if n == 0 {
-			log.Println("0 read")
 			continue
 		}
 		lastRead = time.Now()
@@ -175,11 +176,11 @@ func readBytes(ctx context.Context, stream serial.Port, size uint16) ([]byte, er
 		for _, b := range readBuffer[:n] {
 			out[pos] = b
 			pos++
+			bar.Increment()
 			if uint16(pos) == size {
 				break inner
 			}
 		}
-		bar.Increment()
 	}
 	bar.Finish()
 	return out, nil

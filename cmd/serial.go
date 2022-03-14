@@ -21,15 +21,11 @@ func openPort(port string) (serial.Port, error) {
 		log.Fatal(err)
 	}
 
-	if err := sr.SetReadTimeout(1500 * time.Millisecond); err != nil {
+	if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
 		return nil, err
 	}
 
-	if err := waitAck(sr, '\f'); err != nil {
-		return nil, err
-	}
-
-	if err := sr.ResetInputBuffer(); err != nil {
+	if err := waitAck(sr, '\n'); err != nil {
 		return nil, err
 	}
 

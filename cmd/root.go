@@ -7,7 +7,9 @@ package cmd
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.bug.st/serial"
@@ -86,26 +88,25 @@ func getFlags() (uint8, uint16, uint8, string, error) {
 }
 
 func waitAck(stream serial.Port, char byte) error {
+	start := time.Now()
 	readBuffer := make([]byte, 1)
-	x := 0
-	for x < 3 {
-
+	for {
 		n, err := stream.Read(readBuffer)
 		if err != nil {
 			return err
+		}
+		if time.Since(start) > 2*time.Second {
+			return errors.New("got no ack")
 		}
 		if n == 0 {
 			continue
 			//return errors.New("got no ack")
 		}
 		if readBuffer[0] == char {
-			stream.ResetInputBuffer()
+			log.Println("got ack")
 			return nil
-		} else {
-			//log.Printf("%q", readBuffer[0])
-			//return errors.New("invalid ack byte")
-			x++
 		}
+
 	}
-	return errors.New("got no ack")
+
 }
