@@ -7,12 +7,26 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-  - env:
+  - id: linux
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
+    ignore:
+      - goarch: 386
+  - id: darwin
+    env:
+      - CGO_ENABLED=0
+    goos:
       - darwin
+  - id: windows
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    flags: -buildmode=exe
+    ignore:
+      - goarch: 386
 archives:
   - replacements:
       darwin: Darwin
