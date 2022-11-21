@@ -11,13 +11,13 @@ import (
 )
 
 type appState struct {
-	port     string
-	portList []string
-	delay    uint8
+	port       string
+	portList   []string
+	delayValue binding.Float
 }
 
 var state = &appState{
-	delay: 0,
+	delayValue: binding.NewFloat(),
 }
 
 //go:embed Icon.png
@@ -40,6 +40,10 @@ func newApp() fyne.App {
 	app.Settings().SetTheme(&gocanTheme{})
 
 	state.port = app.Preferences().String("port")
+
+	f := app.Preferences().Float("pin_delay")
+	state.delayValue.Set(f)
+
 	return app
 }
 

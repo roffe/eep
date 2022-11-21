@@ -150,7 +150,11 @@ func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, 
 }
 
 func read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
-	if err := sendCMD(stream, opRead, chip, size, org, state.delay); err != nil {
+	f, err := state.delayValue.Get()
+	if err != nil {
+		return nil, err
+	}
+	if err := sendCMD(stream, opRead, chip, size, org, uint8(f)); err != nil {
 		return nil, err
 	}
 	out, err := readBytes(ctx, stream, p)
@@ -201,7 +205,12 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 }
 
 func (m *mainWindow) erase(stream serial.Port) error {
-	if err := sendCMD(stream, opErase, 66, 1, 8, state.delay); err != nil {
+	f, err := state.delayValue.Get()
+	if err != nil {
+		return err
+	}
+
+	if err := sendCMD(stream, opErase, 66, 1, 8, uint8(f)); err != nil {
 		return err
 	}
 	if err := m.waitAck(stream, '\a'); err != nil {
@@ -211,7 +220,11 @@ func (m *mainWindow) erase(stream serial.Port) error {
 }
 
 func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
-	if err := sendCMD(stream, opWrite, 66, 512, 8, state.delay); err != nil {
+	f, err := state.delayValue.Get()
+	if err != nil {
+		return err
+	}
+	if err := sendCMD(stream, opWrite, 66, 512, 8, uint8(f)); err != nil {
 		return err
 	}
 	if err := m.waitAck(stream, '\f'); err != nil {

@@ -22,9 +22,10 @@ func newMainWindow(app fyne.App) fyne.Window {
 	window.Resize(fyne.NewSize(900, 600))
 	window.CenterOnScreen()
 	mw := &mainWindow{
-		w:   window,
-		app: app,
-		log: createLogList(),
+		w:        window,
+		app:      app,
+		log:      createLogList(),
+		settings: newSettingsWindow(app),
 	}
 
 	window.SetContent(mw.layout())
@@ -34,8 +35,9 @@ func newMainWindow(app fyne.App) fyne.Window {
 }
 
 type mainWindow struct {
-	w   fyne.Window
-	app fyne.App
+	w        fyne.Window
+	app      fyne.App
+	settings fyne.Window
 
 	log *widget.List
 
@@ -74,7 +76,8 @@ func (m *mainWindow) layout() *container.Split {
 			listData.Set([]string{})
 		}),
 		widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-			m.output("Settings clicked")
+			m.settings.Show()
+			m.settings.RequestFocus()
 		}),
 	)
 
