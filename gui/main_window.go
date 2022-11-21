@@ -307,15 +307,6 @@ func (m *mainWindow) append(format string, values ...interface{}) {
 	m.log.Refresh()
 }
 
-func (m *mainWindow) appendPos(index int, format string, values ...interface{}) {
-	di, err := listData.GetValue(listData.Length() - 1)
-	if err != nil {
-		panic(err)
-	}
-	listData.SetValue(index, di+fmt.Sprintf(format, values...))
-	m.log.Refresh()
-}
-
 func (m *mainWindow) disableButtons() {
 	m.rescanButton.Disable()
 	m.portList.Disable()
