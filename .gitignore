@@ -10,4 +10,5 @@ c_cpp_properties.json
 
 dist
 
-eep.exe
+*.exe
+*.zip

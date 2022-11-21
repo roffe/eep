@@ -22,7 +22,7 @@ func newSettingsWindow(app fyne.App) fyne.Window {
 		sliderLabel.SetText(delayLabel(f))
 	}
 
-	slider := widget.NewSliderWithData(5, 300, state.delayValue)
+	slider := widget.NewSliderWithData(100, 300, state.delayValue)
 
 	slider.OnChanged = func(f float64) {
 		sliderLabel.SetText(delayLabel(f))

@@ -42,6 +42,9 @@ func newApp() fyne.App {
 	state.port = app.Preferences().String("port")
 
 	f := app.Preferences().Float("pin_delay")
+	if f < 100 {
+		f = 100
+	}
 	state.delayValue.Set(f)
 
 	return app

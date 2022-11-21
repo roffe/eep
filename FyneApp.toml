@@ -2,7 +2,7 @@ Website = "https://hirschmann-koxha.de/"
 
 [Details]
   Icon = "Icon.png"
-  Name = "Saab CIM Dump"
-  ID = "com.eep.app"
-  Version = "1.0.0"
-  Build = 12
+  Name = "Saab CIM Tool"
+  ID = "com.eep.tool"
+  Version = "1.0.1"
+  Build = 15

@@ -41,7 +41,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        delay(5); // wait for serial port to connect. Needed for native USB
+        delay(20); // wait for serial port to connect. Needed for native USB
     }
     Serial.println();
 }

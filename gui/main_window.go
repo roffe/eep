@@ -16,43 +16,44 @@ import (
 	"go.bug.st/serial/enumerator"
 )
 
+type mainWindow struct {
+	w        fyne.Window
+	app      fyne.App
+	settings fyne.Window
+	help     fyne.Window
+
+	log *widget.List
+
+	rescanButton *widget.Button
+	portList     *widget.Select
+
+	viewButton  *widget.Button
+	readButton  *widget.Button
+	writeButton *widget.Button
+	eraseButton *widget.Button
+
+	progressBar *widget.ProgressBar
+
+	once sync.Once
+}
+
 func newMainWindow(app fyne.App) fyne.Window {
 	window := app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
 	//window.SetFixedSize(true)
 	window.Resize(fyne.NewSize(900, 600))
 	window.CenterOnScreen()
 	mw := &mainWindow{
-		w:        window,
-		app:      app,
-		log:      createLogList(),
-		settings: newSettingsWindow(app),
+		w:           window,
+		app:         app,
+		log:         createLogList(),
+		help:        newHelpWindow(app),
+		settings:    newSettingsWindow(app),
+		progressBar: widget.NewProgressBar(),
 	}
 
 	window.SetContent(mw.layout())
 	window.SetMaster()
-
 	return window
-}
-
-type mainWindow struct {
-	w        fyne.Window
-	app      fyne.App
-	settings fyne.Window
-
-	log *widget.List
-
-	portList *widget.Select
-
-	loadButton  *widget.Button
-	readButton  *widget.Button
-	writeButton *widget.Button
-
-	rescanButton *widget.Button
-	copyButton   *widget.Button
-
-	progressBar *widget.ProgressBar
-
-	once sync.Once
 }
 
 func (m *mainWindow) layout() *container.Split {
@@ -64,14 +65,20 @@ func (m *mainWindow) layout() *container.Split {
 	right := container.NewVBox(
 		m.rescanButton,
 		m.portList,
-		m.loadButton,
+		m.viewButton,
 		m.readButton,
 		m.writeButton,
+		m.eraseButton,
 		layout.NewSpacer(),
 		widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-			m.output("Help clicked")
+			m.help.Show()
+			m.help.RequestFocus()
 		}),
-		m.copyButton,
+		widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
+			if content, err := listData.Get(); err == nil {
+				m.w.Clipboard().SetContent(strings.Join(content, "\n"))
+			}
+		}),
 		widget.NewButtonWithIcon("Clear log", theme.ContentClearIcon(), func() {
 			listData.Set([]string{})
 		}),
@@ -89,6 +96,10 @@ func (m *mainWindow) layout() *container.Split {
 }
 
 func (m *mainWindow) init() {
+	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() {
+		m.portList.Options = m.listPorts()
+	})
+
 	m.portList = widget.NewSelect(m.listPorts(), func(s string) {
 		state.port = s
 		m.app.Preferences().SetString("port", s)
@@ -98,20 +109,49 @@ func (m *mainWindow) init() {
 	if state.port != "" {
 		m.portList.PlaceHolder = state.port
 	}
-	m.loadButton = widget.NewButtonWithIcon("Load", theme.DocumentIcon(), func() {
-		m.output("Load clicked")
+	m.viewButton = widget.NewButtonWithIcon("Load", theme.DocumentIcon(), func() {
+		newViewerWindow(m.app, []byte{})
 	})
+
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)
-	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() {
-		m.portList.Options = m.listPorts()
-	})
-	m.copyButton = widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
-		if content, err := listData.Get(); err == nil {
-			m.w.Clipboard().SetContent(strings.Join(content, "\n"))
-		}
-	})
-	m.progressBar = widget.NewProgressBar()
+	m.eraseButton = widget.NewButtonWithIcon("Erase", theme.DeleteIcon(), m.eraseClickHandler)
+
+}
+
+func (m *mainWindow) eraseClickHandler() {
+	go m.eraseClick()
+}
+
+func (m *mainWindow) eraseClick() {
+	if state.port == "" {
+		m.output("Please select a port first")
+		return
+	}
+	m.disableButtons()
+	defer m.enableButtons()
+
+	ok := sdialog.Message("%s", "Do you want to erase CIM?").Title("Are you sure?").YesNo()
+	if !ok {
+		return
+	}
+	start := time.Now()
+	sr, err := m.openPort(state.port)
+	if sr != nil {
+		defer sr.Close()
+	}
+
+	if err != nil {
+		m.output(err.Error())
+		return
+	}
+
+	m.output("Erasing ... ")
+	if err := m.erase(sr); err != nil {
+		m.output(err.Error())
+	}
+
+	m.output("Erase took %s", time.Since(start).String())
 }
 
 func (m *mainWindow) writeClickHandler() {
@@ -119,10 +159,17 @@ func (m *mainWindow) writeClickHandler() {
 }
 
 func (m *mainWindow) writeClick() {
+	if state.port == "" {
+		m.output("Please select a port first")
+		return
+	}
 	m.disableButtons()
 	defer m.enableButtons()
 	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Load bin file").Load()
 	if err != nil {
+		if err.Error() == "Cancelled" {
+			return
+		}
 		m.output(err.Error())
 		return
 	}
@@ -130,12 +177,10 @@ func (m *mainWindow) writeClick() {
 	bin, err := os.ReadFile(filename)
 	if err != nil {
 		m.output(err.Error())
-		m.enableButtons()
 		return
 	}
 	ok := sdialog.Message("%s", "Do you want to continue?").Title("Are you sure?").YesNo()
 	if !ok {
-		m.output("Write aborted by user")
 		return
 	}
 
@@ -156,6 +201,9 @@ func addSuffix(s, suffix string) string {
 func (m *mainWindow) readClickHandler() {
 	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Save bin file").Save()
 	if err != nil {
+		if err.Error() == "Cancelled" {
+			return
+		}
 		m.output(err.Error())
 		return
 	}
@@ -186,7 +234,7 @@ func (m *mainWindow) readClick(filename string) {
 	m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
 	m.printKV("Configuration Version:", fmt.Sprintf("%d", bin.ConfigurationVersion))
 
-	b, err := bin.Bytes()
+	b, err := bin.XORBytes()
 	if err != nil {
 		m.output(err.Error())
 		return
@@ -228,7 +276,7 @@ func (m *mainWindow) listPorts() []string {
 	return portsList
 }
 
-func (m *mainWindow) output(format string, values ...interface{}) {
+func (m *mainWindow) output(format string, values ...interface{}) int {
 	var text string
 	if format != "" {
 		text = fmt.Sprintf("%s - %s", time.Now().Format("15:04:05.000"), fmt.Sprintf(format, values...))
@@ -236,6 +284,7 @@ func (m *mainWindow) output(format string, values ...interface{}) {
 	listData.Append(text)
 	m.log.Refresh()
 	m.log.ScrollToBottom()
+	return listData.Length()
 }
 
 func (m *mainWindow) append(format string, values ...interface{}) {
@@ -247,19 +296,30 @@ func (m *mainWindow) append(format string, values ...interface{}) {
 	m.log.Refresh()
 }
 
+func (m *mainWindow) appendPos(index int, format string, values ...interface{}) {
+	di, err := listData.GetValue(listData.Length() - 1)
+	if err != nil {
+		panic(err)
+	}
+	listData.SetValue(index, di+fmt.Sprintf(format, values...))
+	m.log.Refresh()
+}
+
 func (m *mainWindow) disableButtons() {
 	m.rescanButton.Disable()
 	m.portList.Disable()
-	m.loadButton.Disable()
+	m.viewButton.Disable()
 	m.readButton.Disable()
 	m.writeButton.Disable()
+	m.eraseButton.Disable()
 }
 
 func (m *mainWindow) enableButtons() {
 	m.rescanButton.Enable()
 	m.readButton.Enable()
 	m.portList.Enable()
-	m.loadButton.Enable()
+	m.viewButton.Enable()
 	m.readButton.Enable()
 	m.writeButton.Enable()
+	m.eraseButton.Enable()
 }

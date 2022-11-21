@@ -20,7 +20,7 @@ require (
 	github.com/jedib0t/go-pretty v4.3.0+incompatible // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/sqweek/dialog v0.0.0-20220809060634-e981b270ebbf // indirect
+	github.com/sqweek/dialog v0.0.0-20220809060634-e981b270ebbf
 	go.mongodb.org/mongo-driver v1.7.5 // indirect
 )
 

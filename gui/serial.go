@@ -209,7 +209,9 @@ func (m *mainWindow) erase(stream serial.Port) error {
 	if err != nil {
 		return err
 	}
-
+	if err := stream.ResetInputBuffer(); err != nil {
+		return err
+	}
 	if err := sendCMD(stream, opErase, 66, 1, 8, uint8(f)); err != nil {
 		return err
 	}
@@ -239,14 +241,13 @@ func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 
 	go func() {
 		buff := make([]byte, 1)
-		for {
+		for !done {
 			n, err := stream.Read(buff)
 			if err != nil {
 				log.Println(err)
 				return
 			}
 			if done {
-				log.Println("Done")
 				return
 			}
 			if n == 0 {
