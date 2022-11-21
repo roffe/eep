@@ -40,7 +40,7 @@ type mainWindow struct {
 func newMainWindow(app fyne.App) fyne.Window {
 	window := app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
 	//window.SetFixedSize(true)
-	window.Resize(fyne.NewSize(900, 600))
+	window.Resize(fyne.NewSize(1200, 600))
 	window.CenterOnScreen()
 	mw := &mainWindow{
 		w:           window,
@@ -183,11 +183,13 @@ func (m *mainWindow) writeClick() {
 	if !ok {
 		return
 	}
-
+	m.output("Flashing CIM ... ")
+	start := time.Now()
 	if err := m.writeCIM(state.port, bin); err != nil {
 		m.output(err.Error())
 		return
 	}
+	m.output("Flashed %s, took %s", filename, time.Since(start).String())
 
 }
 
@@ -199,26 +201,29 @@ func addSuffix(s, suffix string) string {
 }
 
 func (m *mainWindow) readClickHandler() {
-	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Save bin file").Save()
-	if err != nil {
-		if err.Error() == "Cancelled" {
-			return
-		}
-		m.output(err.Error())
-		return
-	}
-	filename = addSuffix(filename, ".bin")
-	go m.readClick(filename)
+
+	go m.readClick()
 }
-func (m *mainWindow) readClick(filename string) {
+func (m *mainWindow) readClick() {
 	m.disableButtons()
 	defer m.enableButtons()
 	if state.port == "" {
 		m.output("Please select a port first")
 		return
 	}
-	//m.output("Reading CIM ...")
-	bin, err := m.readCIM(state.port, 5)
+
+	ignoreReadErrors, _ := state.ignoreError.Get()
+
+	rawBytes, bin, err := m.readCIM(state.port, 1)
+	if err != nil {
+		m.output(err.Error())
+		if ignoreReadErrors {
+			m.saveFile(rawBytes)
+		}
+		return
+	}
+
+	b, err := bin.XORBytes()
 	if err != nil {
 		m.output(err.Error())
 		return
@@ -232,20 +237,26 @@ func (m *mainWindow) readClick(filename string) {
 	m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
 	m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
 	m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
-	m.printKV("Configuration Version:", fmt.Sprintf("%d", bin.ConfigurationVersion))
+	m.printKV("Configuration Version", fmt.Sprintf("%d", bin.ConfigurationVersion))
+	m.saveFile(b)
+}
 
-	b, err := bin.XORBytes()
+func (m *mainWindow) saveFile(data []byte) {
+	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Save bin file").Save()
 	if err != nil {
+		if err.Error() == "Cancelled" {
+			return
+		}
 		m.output(err.Error())
 		return
 	}
+	filename = addSuffix(filename, ".bin")
 
-	if err := os.WriteFile(filename, b, 0644); err == nil {
-		m.output("Saved as " + filename)
+	if err := os.WriteFile(filename, data, 0644); err == nil {
+		m.output("Saved to %s", filename)
 	} else {
 		m.output(err.Error())
 	}
-
 }
 
 func (m *mainWindow) printKV(k, v string) {

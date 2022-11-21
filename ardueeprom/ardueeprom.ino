@@ -41,9 +41,10 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        delay(20); // wait for serial port to connect. Needed for native USB
+        delay(10); // wait for serial port to connect. Needed for native USB
     }
-    Serial.println();
+    delay(300);
+    Serial.write("\n");
 }
 
 void loop()
@@ -122,7 +123,7 @@ void handleCmd(char *msg)
         return;
     case 's':
         parse(msg);
-        Serial.println();
+        Serial.write("\n");
         return;
     case 'w':
     case 'r':
@@ -163,7 +164,7 @@ void handleCmd(char *msg)
         break;
     }
 
-    delayMicroseconds(50);
+    delay(5);
     ep.powerDown();
     ledOff();
 }
@@ -311,7 +312,7 @@ void read()
             break;
         }
     }
-    Serial.println();
+    Serial.write("\n");
 }
 
 static unsigned long lastData;
@@ -394,11 +395,11 @@ void printBin()
         linePos++;
         if (linePos == 24)
         {
-            Serial.println();
+            Serial.write("\n");
             linePos = 0;
         }
     }
-    Serial.println();
+    Serial.write("\n");
     ledOff();
 }
 

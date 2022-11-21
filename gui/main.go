@@ -11,13 +11,17 @@ import (
 )
 
 type appState struct {
-	port       string
-	portList   []string
-	delayValue binding.Float
+	port            string
+	portList        []string
+	readDelayValue  binding.Float
+	writeDelayValue binding.Float
+	ignoreError     binding.Bool
 }
 
 var state = &appState{
-	delayValue: binding.NewFloat(),
+	readDelayValue:  binding.NewFloat(),
+	writeDelayValue: binding.NewFloat(),
+	ignoreError:     binding.NewBool(),
 }
 
 //go:embed Icon.png
@@ -41,12 +45,18 @@ func newApp() fyne.App {
 
 	state.port = app.Preferences().String("port")
 
-	f := app.Preferences().Float("pin_delay")
-	if f < 100 {
-		f = 100
+	r := app.Preferences().Float("read_pin_delay")
+	if r < 20 {
+		r = 100
 	}
-	state.delayValue.Set(f)
+	state.readDelayValue.Set(r)
 
+	w := app.Preferences().Float("write_pin_delay")
+	if r < 100 {
+		r = 200
+	}
+	state.writeDelayValue.Set(w)
+	state.ignoreError.Set(app.Preferences().Bool("ignore_read_errors"))
 	return app
 }
 

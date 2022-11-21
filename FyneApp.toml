@@ -5,4 +5,4 @@ Website = "https://hirschmann-koxha.de/"
   Name = "Saab CIM Tool"
   ID = "com.eep.tool"
   Version = "1.0.1"
-  Build = 15
+  Build = 17
