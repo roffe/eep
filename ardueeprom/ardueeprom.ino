@@ -17,15 +17,17 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN);
+M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 100);
 
 int chipAddr = 0x08;
 int orgAddr = 0x10;
 int sizeAddr = 0x20;
+int delayAddr = 0x30;
 
 static uint8_t cfgChip;
 static uint16_t cfgSize;
 static uint8_t cfgOrg;
+static uint8_t cfgDelay;
 
 void setup()
 {
@@ -59,6 +61,7 @@ void loadSettings()
         cfgOrg = EEPROM.read(orgAddr);
         ep.setChip(cfgChip);
         ep.setOrg(cfgOrg);
+        ep.setPinDelay(cfgDelay);
     }
 }
 #endif
@@ -181,6 +184,9 @@ void parse(char *msg)
     pos = strtok(NULL, ",");
     cfgOrg = atoi(pos);
 
+    pos = strtok(NULL, ",");
+    cfgDelay = atoi(pos);
+
     if (cfgSize == 0)
     {
         Serial.println("\ainvalid size");
@@ -197,10 +203,16 @@ void parse(char *msg)
         return;
     }
 
+    if (!setDelay())
+    {
+        return;
+    }
+
 #ifdef USE_EEPROM
     EEPROM.put(chipAddr, cfgChip);
     EEPROM.put(orgAddr, cfgOrg);
     EEPROM.put(sizeAddr, cfgSize);
+    EEPROM.put(delayAddr, cfgDelay);
     EEPROM.put(0x00, 0x20); // if this is not 0x20 settings will not be loaded from eeprom
 #endif
 }
@@ -250,6 +262,12 @@ bool setOrg()
     return true;
 }
 
+bool setDelay()
+{
+    ep.setPinDelay(cfgDelay);
+    return true;
+}
+
 void help()
 {
     Serial.println("--- eep ---");
@@ -271,6 +289,8 @@ void settings()
     Serial.println(cfgSize);
     Serial.print("org: ");
     Serial.println(cfgOrg);
+    Serial.print("delay: ");
+    Serial.println(cfgDelay);
 }
 
 void read()

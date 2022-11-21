@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -9,6 +8,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -43,7 +43,18 @@ var rootCmd = &cobra.Command{
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(ctx context.Context) {
+func Execute() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.TODO())
+
+	go func() {
+		<-sig
+		cancel()
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
+	}()
+
 	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
 		os.Exit(1)

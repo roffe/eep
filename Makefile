@@ -1,3 +1,4 @@
+.PHONY: gui
 release:
 	goreleaser release --rm-dist
 test:
@@ -9,3 +10,6 @@ test:
 256:
 	go run . write --chip 66 --size 256 --org 16 256.bin --erase
 	go run . read --chip 66 --size 256 --org 16 256_read.bin
+
+gui:
+	fyne package --icon Icon.png --release
