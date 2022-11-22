@@ -8,50 +8,69 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func newSettingsWindow(app fyne.App) fyne.Window {
-	w := app.NewWindow("Settings")
+type settingsWindow struct {
+	e                *EEPGui
+	w                fyne.Window
+	ignoreError      *widget.Check
+	readSliderLabel  *widget.Label
+	readSlider       *widget.Slider
+	writeSliderLabel *widget.Label
+	writeSlider      *widget.Slider
+}
+
+func newSettingsWindow(e *EEPGui) *settingsWindow {
+	w := e.app.NewWindow("Settings")
 	w.SetCloseIntercept(func() {
 		w.Hide()
 	})
 	w.Resize(fyne.NewSize(300, 110))
 	w.SetFixedSize(true)
 	w.CenterOnScreen()
+	sw := &settingsWindow{
+		e:                e,
+		w:                w,
+		readSliderLabel:  widget.NewLabel(""),
+		readSlider:       widget.NewSliderWithData(20, 400, e.state.readDelayValue),
+		writeSliderLabel: widget.NewLabel(""),
+		writeSlider:      widget.NewSliderWithData(100, 400, e.state.writeDelayValue),
+	}
+	w.SetContent(sw.layout())
+	return sw
+}
 
-	readSliderLabel := widget.NewLabel("")
-	if f, err := state.readDelayValue.Get(); err == nil {
-		readSliderLabel.SetText(delayLabel("Read", f))
-	}
-	readSlider := widget.NewSliderWithData(20, 300, state.readDelayValue)
-	readSlider.OnChanged = func(f float64) {
-		readSliderLabel.SetText(delayLabel("Read", f))
-		app.Preferences().SetFloat("read_pin_delay", f)
-		state.readDelayValue.Set(f)
-	}
-
-	writeSliderLabel := widget.NewLabel("")
-	if f, err := state.writeDelayValue.Get(); err == nil {
-		writeSliderLabel.SetText(delayLabel("Write", f))
-	}
-	writeSlider := widget.NewSliderWithData(100, 300, state.writeDelayValue)
-	writeSlider.OnChanged = func(f float64) {
-		writeSliderLabel.SetText(delayLabel("Write", f))
-		app.Preferences().SetFloat("write_pin_delay", f)
-		state.writeDelayValue.Set(f)
+func (sw *settingsWindow) layout() fyne.CanvasObject {
+	sw.ignoreError = widget.NewCheckWithData("Ignore read validation errors", sw.e.state.ignoreError)
+	sw.ignoreError.OnChanged = func(b bool) {
+		sw.e.app.Preferences().SetBool("ignore_read_errors", b)
 	}
 
-	ignoreError := widget.NewCheckWithData("Ignore read validation errors", state.ignoreError)
-	ignoreError.OnChanged = func(b bool) {
-		app.Preferences().SetBool("ignore_read_errors", b)
+	if f, err := sw.e.state.readDelayValue.Get(); err == nil {
+		sw.readSliderLabel.SetText(delayLabel("Read", f))
 	}
-	w.SetContent(container.NewVBox(
-		ignoreError,
-		readSliderLabel,
-		readSlider,
-		writeSliderLabel,
-		writeSlider,
-		widget.NewSeparator(),
-	))
-	return w
+
+	sw.readSlider.OnChanged = func(f float64) {
+		sw.readSliderLabel.SetText(delayLabel("Read", f))
+		sw.e.app.Preferences().SetFloat("read_pin_delay", f)
+		sw.e.state.readDelayValue.Set(f)
+	}
+
+	if f, err := sw.e.state.writeDelayValue.Get(); err == nil {
+		sw.writeSliderLabel.SetText(delayLabel("Write", f))
+	}
+
+	sw.writeSlider.OnChanged = func(f float64) {
+		sw.writeSliderLabel.SetText(delayLabel("Write", f))
+		sw.e.app.Preferences().SetFloat("write_pin_delay", f)
+		sw.e.state.writeDelayValue.Set(f)
+	}
+
+	return container.NewVBox(
+		sw.ignoreError,
+		sw.readSliderLabel,
+		sw.readSlider,
+		sw.writeSliderLabel,
+		sw.writeSlider,
+	)
 }
 
 func delayLabel(t string, f float64) string {

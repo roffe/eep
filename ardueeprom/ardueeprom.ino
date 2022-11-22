@@ -27,7 +27,7 @@ int delayAddr = 0x30;
 static uint8_t cfgChip;
 static uint16_t cfgSize;
 static uint8_t cfgOrg;
-static uint8_t cfgDelay;
+static uint16_t cfgDelay;
 
 void setup()
 {
@@ -43,7 +43,7 @@ void setup()
     {
         delay(10); // wait for serial port to connect. Needed for native USB
     }
-    delay(300);
+    delay(150);
     Serial.write("\n");
 }
 
@@ -252,9 +252,6 @@ bool setOrg()
     case 8:
         ep.setOrg(ORG_8);
         break;
-    case 16:
-        ep.setOrg(ORG_16);
-        break;
     default:
         Serial.println("\ainvalid org");
         return false;
@@ -315,49 +312,59 @@ void read()
     Serial.write("\n");
 }
 
+// static uint8_t writeBufferLength;
+// const uint8_t WRITE_BUFF_SIZE = 16;
+// static char buff[WRITE_BUFF_SIZE + 1];
 static unsigned long lastData;
 
 void write()
 {
     lastData = millis();
     ep.writeEnable();
-    uint8_t buff[2];
-    uint8_t pos = 0;
-
     Serial.write('\f');
+
+    //  uint16_t wpos = 0;
+
     for (uint16_t i = 0; i < cfgSize; i++)
     {
         while (Serial.available() == 0)
         {
-            if ((millis() - lastData) > 2000)
+            if ((millis() - lastData) > 1000)
             {
                 ep.writeDisable();
                 Serial.println("\adata read timeout");
                 return;
             }
         }
-        switch (cfgOrg)
-        {
-        case 8:
-            ep.write(i, Serial.read());
-            break;
+        /*
+                char c = Serial.read();
+                lastData = millis();
 
-        case 16:
-            if (pos == 2)
-            {
-                uint16_t wd = ((uint16_t)buff[1] << 8) | buff[0];
-                ep.write(i, wd);
-                pos = 0;
-                break;
-            }
-            buff[pos++] = Serial.read();
-            i--;
-            break;
-        }
+                if (writeBufferLength < WRITE_BUFF_SIZE)
+                {
+                    buff[writeBufferLength++] = c;
+                    buffer[writeBufferLength] = 0x00;
+                }
 
+                if (writeBufferLength == WRITE_BUFF_SIZE)
+                {
+                    for (size_t xi = 0; xi < writeBufferLength; xi++)
+                    {
+                        ep.write(wpos++, buff[xi]);
+                    }
+                    writeBufferLength = 0;
+                    Serial.print("\f");
+                    if (wpos > 512)
+                    {
+                        break;
+                    }
+                }
+        */
+        ep.write(i, Serial.read());
         lastData = millis();
         Serial.print("\f");
     }
+
     ep.writeDisable();
     Serial.println("\r\n--- write done ---");
 }

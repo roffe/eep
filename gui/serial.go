@@ -18,25 +18,53 @@ const (
 	opErase = "e"
 )
 
-func (m *mainWindow) writeCIM(port string, data []byte) error {
-	sr, err := m.openPort(state.port)
+func (m *mainWindow) openPort(port string) (serial.Port, error) {
+	mode := &serial.Mode{
+		BaudRate: 57600,
+		DataBits: 8,
+		Parity:   serial.NoParity,
+		StopBits: serial.OneStopBit,
+	}
+	m.output("Init adapter on %q... ", port)
+	sr, err := serial.Open(port, mode)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
+		return nil, err
+	}
+
+	if err := waitAck(sr, '\n'); err != nil {
+		return sr, err
+	}
+	m.append("Done")
+	return sr, nil
+}
+
+func (m *mainWindow) writeCIM(port string, data []byte) bool {
+	sr, err := m.openPort(m.e.state.port)
 	if sr != nil {
 		defer sr.Close()
 	}
 	if err != nil {
-		return err
+		m.output("Failed to init adapter: %v", err)
+		return false
 	}
-	return m.write(context.TODO(), sr, data)
+	if err := m.write(context.TODO(), sr, data); err != nil {
+		m.output("Failed to write: %v", err)
+		return false
+	}
+	return true
 }
 
 func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
-
-	sr, err := m.openPort(state.port)
+	sr, err := m.openPort(m.e.state.port)
 	if sr != nil {
 		defer sr.Close()
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("Failed to init adapter: %v", err) //lint:ignore ST1005 ignore
 	}
 
 	sr.ResetInputBuffer()
@@ -63,7 +91,7 @@ func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
 func (m *mainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
-	bin, err := read(ctx, sr, 66, 512, 8, m.progressBar)
+	bin, err := m.read(ctx, sr, 66, 512, 8, m.progressBar)
 	if err != nil {
 		return bin, nil, err
 	}
@@ -71,31 +99,7 @@ func (m *mainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	return bin, cb, err
 }
 
-func (m *mainWindow) openPort(port string) (serial.Port, error) {
-	mode := &serial.Mode{
-		BaudRate: 57600,
-		DataBits: 8,
-		Parity:   serial.NoParity,
-		StopBits: serial.OneStopBit,
-	}
-	m.output("Init adapter on %q... ", port)
-	sr, err := serial.Open(port, mode)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
-		return nil, err
-	}
-
-	if err := m.waitAck(sr, '\n'); err != nil {
-		return nil, err
-	}
-	m.append("Done")
-	return sr, nil
-}
-
-func (m *mainWindow) waitAck(stream serial.Port, char byte) error {
+func waitAck(stream serial.Port, char byte) error {
 	start := time.Now()
 	readBuffer := make([]byte, 1)
 	for {
@@ -123,13 +127,13 @@ func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, 
 		return err
 	}
 	if n != len(cmd) {
-		return errors.New("failed to write all bytes to com")
+		return errors.New("Failed to write all bytes to port") //lint:ignore ST1005 ignore this
 	}
 	return nil
 }
 
-func read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
-	f, err := state.readDelayValue.Get()
+func (m *mainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
+	f, err := m.e.state.readDelayValue.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +151,7 @@ func read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org 
 func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) ([]byte, error) {
 	out := make([]byte, 512)
 	//buff := bytes.NewBuffer(nil)
-	readBuffer := make([]byte, 64)
+	readBuffer := make([]byte, 32)
 	pos := 0
 	lastRead := time.Now()
 	for pos < 512 {
@@ -157,34 +161,32 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 		default:
 		}
 		if time.Since(lastRead) > 1*time.Second {
-			log.Println("read timeout")
-			return nil, errors.New("timeout reading eeprom")
+			return nil, errors.New("Timeout reading eeprom") //lint:ignore ST1005 ignore this
 		}
 		n, err := stream.Read(readBuffer)
 		if err != nil {
-			log.Println("error reading")
 			return nil, err
 		}
 		if n == 0 {
 			continue
 		}
 		lastRead = time.Now()
+		p.SetValue(float64(pos))
 	inner:
 		for _, b := range readBuffer[:n] {
 			out[pos] = b
 			pos++
-			p.Value++
-			p.Refresh()
 			if pos == 512 {
 				break inner
 			}
 		}
 	}
+	p.SetValue(512)
 	return out, nil
 }
 
 func (m *mainWindow) erase(stream serial.Port) error {
-	f, err := state.writeDelayValue.Get()
+	f, err := m.e.state.writeDelayValue.Get()
 	if err != nil {
 		return err
 	}
@@ -194,7 +196,7 @@ func (m *mainWindow) erase(stream serial.Port) error {
 	if err := sendCMD(stream, opErase, 66, 1, 8, uint8(f)); err != nil {
 		return err
 	}
-	if err := m.waitAck(stream, '\a'); err != nil {
+	if err := waitAck(stream, '\a'); err != nil {
 		return err
 	}
 	time.Sleep(20 * time.Millisecond)
@@ -203,14 +205,14 @@ func (m *mainWindow) erase(stream serial.Port) error {
 }
 
 func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
-	f, err := state.writeDelayValue.Get()
+	f, err := m.e.state.writeDelayValue.Get()
 	if err != nil {
 		return err
 	}
 	if err := sendCMD(stream, opWrite, 66, 512, 8, uint8(f)); err != nil {
 		return err
 	}
-	if err := m.waitAck(stream, '\f'); err != nil {
+	if err := waitAck(stream, '\f'); err != nil {
 		return err
 	}
 
@@ -238,20 +240,52 @@ func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 				select {
 				case <-sendLock:
 				default:
+					panic("korv")
 				}
 			}
 
 		}
 	}()
+	/*
+		r := bytes.NewReader(data)
+		bs := 0
+		chunkSize := 16
+		payload := make([]byte, chunkSize)
+		for {
+			bs += chunkSize
+			n, err := r.Read(payload)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
 
+			}
+			if n != chunkSize {
+				return errors.New("invalid chunk size")
+			}
+			sendLock <- struct{}{}
+			nw, err := stream.Write(payload[:n])
+			if err != nil {
+				return err
+			}
+			m.progressBar.SetValue(float64(bs))
+			if nw != chunkSize {
+				log.Println(err)
+			}
+
+		}
+	*/
 	for i, b := range data {
+		m.progressBar.SetValue(float64(i))
 		sendLock <- struct{}{}
 		if _, err := stream.Write([]byte{b}); err != nil {
 			return err
 		}
-		m.progressBar.SetValue(float64(i + 1))
 	}
+
 	done = true
 	time.Sleep(100 * time.Millisecond)
+	m.progressBar.SetValue(512)
 	return nil
 }

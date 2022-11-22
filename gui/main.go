@@ -7,8 +7,15 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/widget"
 )
+
+type EEPGui struct {
+	app   fyne.App
+	state *appState
+	mw    *mainWindow
+	hw    *helpWindow
+	sw    *settingsWindow
+}
 
 type appState struct {
 	port            string
@@ -16,12 +23,6 @@ type appState struct {
 	readDelayValue  binding.Float
 	writeDelayValue binding.Float
 	ignoreError     binding.Bool
-}
-
-var state = &appState{
-	readDelayValue:  binding.NewFloat(),
-	writeDelayValue: binding.NewFloat(),
-	ignoreError:     binding.NewBool(),
 }
 
 //go:embed Icon.png
@@ -33,50 +34,36 @@ func init() {
 }
 
 func Run() {
-	app := newApp()
-	newMainWindow(app).Show()
-	app.Run()
-}
-
-func newApp() fyne.App {
 	app := app.NewWithID("com.cimtool")
 	app.SetIcon(appIcon)
 	app.Settings().SetTheme(&gocanTheme{})
 
-	state.port = app.Preferences().String("port")
+	eep := &EEPGui{
+		app: app,
+		state: &appState{
+			port:            app.Preferences().String("port"),
+			readDelayValue:  binding.NewFloat(),
+			writeDelayValue: binding.NewFloat(),
+			ignoreError:     binding.NewBool(),
+		},
+	}
 
 	r := app.Preferences().Float("read_pin_delay")
 	if r < 20 {
 		r = 100
 	}
-	state.readDelayValue.Set(r)
+	eep.state.readDelayValue.Set(r)
 
 	w := app.Preferences().Float("write_pin_delay")
 	if r < 100 {
 		r = 200
 	}
-	state.writeDelayValue.Set(w)
-	state.ignoreError.Set(app.Preferences().Bool("ignore_read_errors"))
-	return app
-}
+	eep.state.writeDelayValue.Set(w)
+	eep.state.ignoreError.Set(app.Preferences().Bool("ignore_read_errors"))
 
-var listData = binding.NewStringList()
+	eep.mw = newMainWindow(eep)
+	eep.hw = newHelpWindow(eep)
+	eep.sw = newSettingsWindow(eep)
 
-func createLogList() *widget.List {
-	return widget.NewListWithData(
-		listData,
-		func() fyne.CanvasObject {
-			w := widget.NewLabel("")
-			w.TextStyle.Monospace = true
-			return w
-		},
-		func(item binding.DataItem, obj fyne.CanvasObject) {
-			i := item.(binding.String)
-			txt, err := i.Get()
-			if err != nil {
-				panic(err)
-			}
-			obj.(*widget.Label).SetText(txt)
-		},
-	)
+	eep.app.Run()
 }

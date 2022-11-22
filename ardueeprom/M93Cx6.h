@@ -1,9 +1,6 @@
 #ifndef M93Cx6_h
 #define M93Cx6_h
 
-//  Uncomment the following line to enable delay between pin toggles
-#define PIN_DELAY_TIME 100
-
 //  Devices Supported
 #define M93C46 46
 #define M93C56 56
@@ -13,7 +10,6 @@
 
 //  8-bit or 16-bit Data Organisation
 #define ORG_8 8
-#define ORG_16 16
 
 //  EEPROM Operation Codes with Start Bit built in
 #define OP_READ B110
@@ -36,10 +32,10 @@ class M93Cx6
 public:
     M93Cx6(uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin);
     M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin);
-    M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin, uint8_t pinDelay);
+    M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin, uint16_t pinDelay);
     void setChip(uint8_t);          //  Select which chip (M93C46, M93C56, etc)
     void setOrg(uint8_t);           //  Set Data Organisation (ORG_8 or ORG_16)
-    void setPinDelay(uint8_t);      //  Set Pindelay
+    void setPinDelay(uint16_t);     //  Set Pindelay
     void setCheckStatus(uint8_t);   //  Check write status
     uint16_t read(uint16_t);        //  Read value at the address
     void write(uint16_t, uint16_t); //  Write value to address
@@ -54,7 +50,8 @@ public:
 
 private:
     uint8_t _dataLength, _addressLength;
-    uint8_t _pwrPin, _csPin, _skPin, _diPin, _doPin, _orgPin, _pinDelay;
+    uint8_t _pwrPin, _csPin, _skPin, _diPin, _doPin, _orgPin;
+    uint16_t _pinDelay;
     uint8_t _org, _chip, _checkStatus;
     uint16_t shiftIn(uint16_t length);
     void shiftOut(uint16_t data, uint8_t length);
