@@ -13,3 +13,6 @@ test:
 
 gui:
 	fyne package --icon Icon.png --release
+
+release:
+	fyne package --os windows
