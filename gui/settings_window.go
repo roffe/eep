@@ -20,32 +20,26 @@ type settingsWindow struct {
 
 func newSettingsWindow(e *EEPGui) *settingsWindow {
 	w := e.app.NewWindow("Settings")
-	w.SetCloseIntercept(func() {
-		w.Hide()
-	})
-	w.Resize(fyne.NewSize(300, 110))
-	w.SetFixedSize(true)
-	w.CenterOnScreen()
 	sw := &settingsWindow{
 		e:                e,
 		w:                w,
+		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.state.ignoreError),
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(20, 400, e.state.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
 		writeSlider:      widget.NewSliderWithData(100, 400, e.state.writeDelayValue),
 	}
-	w.SetContent(sw.layout())
-	return sw
-}
-
-func (sw *settingsWindow) layout() fyne.CanvasObject {
-	sw.ignoreError = widget.NewCheckWithData("Ignore read validation errors", sw.e.state.ignoreError)
-	sw.ignoreError.OnChanged = func(b bool) {
-		sw.e.app.Preferences().SetBool("ignore_read_errors", b)
-	}
 
 	if f, err := sw.e.state.readDelayValue.Get(); err == nil {
 		sw.readSliderLabel.SetText(delayLabel("Read", f))
+	}
+
+	if f, err := sw.e.state.writeDelayValue.Get(); err == nil {
+		sw.writeSliderLabel.SetText(delayLabel("Write", f))
+	}
+
+	sw.ignoreError.OnChanged = func(b bool) {
+		sw.e.app.Preferences().SetBool("ignore_read_errors", b)
 	}
 
 	sw.readSlider.OnChanged = func(f float64) {
@@ -54,16 +48,24 @@ func (sw *settingsWindow) layout() fyne.CanvasObject {
 		sw.e.state.readDelayValue.Set(f)
 	}
 
-	if f, err := sw.e.state.writeDelayValue.Get(); err == nil {
-		sw.writeSliderLabel.SetText(delayLabel("Write", f))
-	}
-
 	sw.writeSlider.OnChanged = func(f float64) {
 		sw.writeSliderLabel.SetText(delayLabel("Write", f))
 		sw.e.app.Preferences().SetFloat("write_pin_delay", f)
 		sw.e.state.writeDelayValue.Set(f)
 	}
+	w.SetCloseIntercept(func() {
+		w.Hide()
+	})
 
+	w.Resize(fyne.NewSize(300, 110))
+	w.SetFixedSize(true)
+	w.CenterOnScreen()
+	w.SetContent(sw.layout())
+	w.Hide()
+	return sw
+}
+
+func (sw *settingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
 		sw.ignoreError,
 		sw.readSliderLabel,

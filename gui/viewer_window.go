@@ -5,63 +5,91 @@ import (
 	"fmt"
 	"image/color"
 	"io"
-	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
-func newViewerWindow(app fyne.App, filename string, data []byte) fyne.Window {
-	w := app.NewWindow("Viewing " + filename)
+type viewerWindow struct {
+	e       *EEPGui
+	w       fyne.Window
+	toolbar *widget.Toolbar
+	grid    *widget.TextGrid
+	data    []byte
+	saved   bool
+}
+
+func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose bool) *viewerWindow {
+	w := e.app.NewWindow("Viewing " + filename)
+	vw := &viewerWindow{
+		e:    e,
+		w:    w,
+		data: data,
+		grid: widget.NewTextGrid(),
+	}
+	vw.toolbar = vw.newToolbar()
+
+	w.SetCloseIntercept(func() {
+		if askSaveOnClose && !vw.saved {
+			dialog.ShowConfirm("Unsaved file", "Save file before closing?", func(b bool) {
+				if b {
+					e.mw.saveFile(vw.data)
+				}
+				w.Close()
+			}, vw.w)
+		} else {
+			w.Close()
+
+		}
+	})
+
+	for i, row := range generateGrid(vw.data) {
+		vw.grid.SetRow(i, row)
+	}
+	w.SetContent(vw.layout())
 	w.Resize(fyne.NewSize(256, 256))
 	w.SetFixedSize(true)
-	w.CenterOnScreen()
-	grid := widget.NewTextGrid()
+	w.Show()
+	return vw
+}
 
-	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.DocumentCreateIcon(), func() {}),
+func (vw *viewerWindow) newToolbar() *widget.Toolbar {
+	return widget.NewToolbar(
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), func() {
+			vw.e.mw.saveFile(vw.data)
+			vw.saved = true
+		}),
 		widget.NewToolbarSeparator(),
-		widget.NewToolbarAction(theme.ContentCutIcon(), func() {}),
-		widget.NewToolbarAction(theme.ContentCopyIcon(), func() {}),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
-			for i := range data {
-				data[i] ^= 0xff
+			for i := range vw.data {
+				vw.data[i] ^= 0xff
 			}
-			for i, r := range foo(data) {
+			for i, r := range generateGrid(vw.data) {
 				for j, c := range r.Cells {
-					grid.SetCell(i, j, c)
+					vw.grid.SetCell(i, j, c)
 				}
 			}
 		}),
 		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.HelpIcon(), func() {}),
+		widget.NewToolbarAction(theme.HelpIcon(), func() {
+			vw.e.hw.w.Show()
+		}),
 	)
-
-	b, err := os.ReadFile("test.bin")
-	if err != nil {
-		panic(err)
-	}
-
-	rows := foo(b)
-	for i, row := range rows {
-		grid.SetRow(i, row)
-	}
-
-	content := container.NewBorder(toolbar, nil, nil, nil, container.New(layout.NewMaxLayout(),
-		grid,
-	))
-
-	w.SetContent(
-		content,
-	)
-	w.Show()
-	return w
 }
 
-func foo(data []byte) []widget.TextGridRow {
+func (vw *viewerWindow) layout() fyne.CanvasObject {
+	return container.NewBorder(vw.toolbar, nil, nil, nil,
+		container.New(layout.NewMaxLayout(),
+			vw.grid,
+		),
+	)
+}
+
+func generateGrid(data []byte) []widget.TextGridRow {
 	var rows []widget.TextGridRow
 	r := bytes.NewReader(data)
 	buff := make([]byte, 32)

@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -38,7 +39,7 @@ func newMainWindow(e *EEPGui) *mainWindow {
 	window := e.app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
 	window.Resize(fyne.NewSize(1200, 600))
 	window.CenterOnScreen()
-	m := &mainWindow{e: e}
+	m := &mainWindow{e: e, w: window}
 	window.SetContent(m.layout())
 	window.SetMaster()
 	window.Show()
@@ -141,7 +142,7 @@ func (m *mainWindow) viewClickHandler() {
 			m.output(err.Error())
 			return
 		}
-		newViewerWindow(m.e.app, filename, bin)
+		newViewerWindow(m.e, filename, bin, false)
 	}()
 }
 
@@ -161,11 +162,17 @@ func (m *mainWindow) readClickHandler() {
 			m.output(err.Error())
 			if ignoreReadErrors {
 				m.saveFile(rawBytes)
+			} else {
+				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(b bool) {
+					if b {
+						newViewerWindow(m.e, fmt.Sprintf("failed read from %s", time.Now().Format(time.RFC1123Z)), rawBytes, true)
+					}
+				}, m.w)
 			}
 			return
 		}
 
-		b, err := bin.XORBytes()
+		xorBytes, err := bin.XORBytes()
 		if err != nil {
 			m.output(err.Error())
 			return
@@ -180,7 +187,8 @@ func (m *mainWindow) readClickHandler() {
 		m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
 		m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
 		m.printKV("Configuration Version", fmt.Sprintf("%d", bin.ConfigurationVersion))
-		m.saveFile(b)
+
+		newViewerWindow(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)
 	}()
 }
 
@@ -195,6 +203,9 @@ func (m *mainWindow) writeClickHandler() {
 
 		filename, bin, err := loadFile()
 		if err != nil {
+			if err.Error() == "Cancelled" {
+				return
+			}
 			m.output(err.Error())
 			return
 		}
@@ -245,14 +256,14 @@ func (m *mainWindow) eraseClickHandler() {
 	}()
 }
 
-func (m *mainWindow) saveFile(data []byte) {
+func (m *mainWindow) saveFile(data []byte) bool {
 	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Save bin file").Save()
 	if err != nil {
 		if err.Error() == "Cancelled" {
-			return
+			return false
 		}
 		m.output(err.Error())
-		return
+		return false
 	}
 	filename = addSuffix(filename, ".bin")
 
@@ -260,15 +271,14 @@ func (m *mainWindow) saveFile(data []byte) {
 		m.output("Saved to %s", filename)
 	} else {
 		m.output(err.Error())
+		return false
 	}
+	return true
 }
 
 func loadFile() (string, []byte, error) {
 	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Load bin file").Load()
 	if err != nil {
-		if err.Error() == "Cancelled" {
-			return "", nil, nil
-		}
 		return "", nil, err
 	}
 
