@@ -76,7 +76,7 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			vw.e.hw.w.Show()
+			vw.e.hw.Show()
 		}),
 	)
 }

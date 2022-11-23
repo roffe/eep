@@ -81,8 +81,7 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 		m.eraseButton,
 		layout.NewSpacer(),
 		widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-			m.e.hw.w.Show()
-			m.e.hw.w.RequestFocus()
+			m.e.hw.Show()
 		}),
 		widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
 			if content, err := m.logList.Get(); err == nil {
@@ -93,8 +92,8 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.logList.Set([]string{})
 		}),
 		widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-			m.e.sw.w.Show()
-			m.e.sw.w.RequestFocus()
+			m.e.sw.Show()
+
 		}),
 	)
 

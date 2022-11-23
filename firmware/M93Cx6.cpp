@@ -13,11 +13,11 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     _doPin = doPin;
     _orgPin = orgPin;
     _pinDelay = pinDelay;
-    //_addressLength = 9;
-    //_dataLength = 8;
-    //_org = ORG_8;
-    //_chip = M93C66;
-    //_checkStatus = 1;
+    _dataLength = 8;
+    _org = ORG_8;
+    _chip = M93C66;
+    _addressLength = 9;
+    _checkStatus = 1;
 
     if (_pwrPin != 0xFF)
         pinMode(_pwrPin, OUTPUT);
@@ -34,10 +34,7 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     pinLow(_doPin);
     pinLow(_skPin);
     pinLow(_csPin);
-
-    setChip(M93C66);
-    setOrg(ORG_8);
-    setPinDelay(_pinDelay);
+    pinLow(_orgPin);
 }
 
 void M93Cx6::setChip(uint8_t chip)

@@ -12,20 +12,19 @@ import (
 type helpWindow struct {
 	e *EEPGui
 	w fyne.Window
+
+	tabs *container.DocTabs
 }
 
 func newHelpWindow(e *EEPGui) *helpWindow {
 	w := e.app.NewWindow("Help")
-	w.Resize(fyne.NewSize(1000, 800))
+	//w.Resize(fyne.NewSize(1000, 850))
 	w.SetCloseIntercept(func() {
 		w.Hide()
 	})
 	hw := &helpWindow{e: e, w: w}
-	w.SetContent(hw.layout())
-	return hw
-}
+	hw.w.Resize(fyne.NewSize(1000, 850))
 
-func (hw *helpWindow) layout() fyne.CanvasObject {
 	introTab := container.NewTabItemWithIcon("Intro", theme.QuestionIcon(),
 		container.NewVScroll(
 			container.NewVBox(
@@ -66,20 +65,29 @@ func (hw *helpWindow) layout() fyne.CanvasObject {
 		),
 	)
 
-	tabs := container.NewDocTabs(
+	hw.tabs = container.NewDocTabs(
 		introTab,
 		failedTab,
 		settingsTab,
 	)
-	tabs.CloseIntercept = func(ti *container.TabItem) {}
+	hw.tabs.CloseIntercept = func(ti *container.TabItem) {}
 
+	hw.w.SetContent(hw.layout())
+
+	return hw
+}
+
+func (hw *helpWindow) Show() {
+	hw.w.Show()
+}
+
+func (hw *helpWindow) layout() fyne.CanvasObject {
 	header := widget.NewLabelWithStyle("Welcome to the CIM Tool!", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	footer := container.NewVBox()
-
 	return container.New(
 		layout.NewBorderLayout(header, footer, nil, nil),
 		header,
 		footer,
-		tabs,
+		hw.tabs,
 	)
 }

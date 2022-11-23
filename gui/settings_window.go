@@ -57,12 +57,14 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 		w.Hide()
 	})
 
-	w.Resize(fyne.NewSize(300, 110))
-	w.SetFixedSize(true)
 	w.CenterOnScreen()
-	w.SetContent(sw.layout())
-	w.Hide()
+	w.Resize(fyne.NewSize(300, 110))
+	sw.w.SetContent(sw.layout())
 	return sw
+}
+
+func (sw *settingsWindow) Show() {
+	sw.w.Show()
 }
 
 func (sw *settingsWindow) layout() fyne.CanvasObject {

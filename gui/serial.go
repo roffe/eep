@@ -160,7 +160,8 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 			return out, ctx.Err()
 		default:
 		}
-		if time.Since(lastRead) > 1*time.Second {
+		if time.Since(lastRead) > 2*time.Second {
+			log.Printf("%X", out)
 			return nil, errors.New("Timeout reading eeprom") //lint:ignore ST1005 ignore this
 		}
 		n, err := stream.Read(readBuffer)
