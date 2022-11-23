@@ -1,4 +1,4 @@
-# Arduino 93Cx6 EEPROM programmer with go cross-platform CLI-tool
+# Saab CIM Tool
 
 ![unit](unit.jpg)
 (image has external led on pin13 & push button from other project hooked up)
