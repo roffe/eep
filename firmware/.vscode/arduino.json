@@ -1,5 +1,5 @@
 {
-    "sketch": "ardueeprom.ino",
+    "sketch": "firmware.ino",
     "board": "arduino:avr:uno",
     "port": "COM3",
     "output": "./build",
