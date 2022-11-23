@@ -1,17 +1,10 @@
 #include "M93Cx6.h"
 
-#ifdef PIN_DELAY_TIME
-#define PIN_DELAY delayMicroseconds(PIN_DELAY_TIME)
-#else
-#define PIN_DELAY
-#endif
-
-M93Cx6::M93Cx6(uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF)
+M93Cx6::M93Cx6(uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF, uint8_t pinDelay = 0x64)
 {
-    M93Cx6(0xFF, csPin, skPin, diPin, doPin, orgPin);
+    M93Cx6(0xFF, csPin, skPin, diPin, doPin, orgPin, pinDelay);
 }
-
-M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF)
+M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF, uint16_t pinDelay = 0x64)
 {
     _pwrPin = pwrPin;
     _csPin = csPin;
@@ -19,11 +12,12 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     _diPin = diPin;
     _doPin = doPin;
     _orgPin = orgPin;
-    //_addressLength = 9;
-    //_dataLength = 8;
-    //_org = ORG_8;
-    //_chip = M93C66;
-    //_checkStatus = 1;
+    _pinDelay = pinDelay;
+    _dataLength = 8;
+    _org = ORG_8;
+    _chip = M93C66;
+    _addressLength = 9;
+    _checkStatus = 1;
 
     if (_pwrPin != 0xFF)
         pinMode(_pwrPin, OUTPUT);
@@ -40,9 +34,7 @@ M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint
     pinLow(_doPin);
     pinLow(_skPin);
     pinLow(_csPin);
-
-    setChip(M93C66);
-    setOrg(ORG_8);
+    pinLow(_orgPin);
 }
 
 void M93Cx6::setChip(uint8_t chip)
@@ -79,14 +71,12 @@ void M93Cx6::setOrg(uint8_t org)
         if (_orgPin != 0xFF)
             pinLow(_orgPin);
         break;
-    case ORG_16:
-        _org = org;
-        _dataLength = 16;
-        setChip(_chip);
-        if (_orgPin != 0xFF)
-            pinHigh(_orgPin);
-        break;
     }
+}
+
+void M93Cx6::setPinDelay(uint16_t delay)
+{
+    _pinDelay = delay;
 }
 
 void M93Cx6::setCheckStatus(uint8_t status)
@@ -99,9 +89,9 @@ void M93Cx6::powerUp()
     if (_pwrPin != 0xFF)
     {
         pinLow(_csPin);
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
         pinHigh(_pwrPin);
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
     }
 }
 
@@ -126,7 +116,7 @@ uint16_t M93Cx6::read(uint16_t address)
     shiftOut(address, _addressLength);
     data = shiftIn(_dataLength);
     pinLow(_csPin);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     return data;
 }
 
@@ -137,7 +127,7 @@ void M93Cx6::write(uint16_t address, uint16_t data)
     shiftOut(address, _addressLength);
     shiftOut(data, _dataLength);
     pinLow(_csPin);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     checkStatus();
 }
 
@@ -148,7 +138,7 @@ void M93Cx6::writeAll(uint8_t data)
     shiftOut(out, _addressLength + 3);
     shiftOut(data, _dataLength);
     pinLow(_csPin);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     checkStatus();
 }
 
@@ -157,7 +147,7 @@ void M93Cx6::erase(uint8_t address)
     pinHigh(_csPin);
     shiftOut(OP_ERASE, 3);
     shiftOut(address, _addressLength);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     checkStatus();
 }
 
@@ -166,7 +156,7 @@ void M93Cx6::eraseAll()
     uint16_t out = (OP_ERAL << (_addressLength - 2));
     pinHigh(_csPin);
     shiftOut(out, _addressLength + 3);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     checkStatus();
 }
 
@@ -176,7 +166,7 @@ void M93Cx6::writeEnable()
     pinHigh(_csPin);
     shiftOut(out, _addressLength + 3);
     pinLow(_csPin);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
 }
 
 void M93Cx6::writeDisable()
@@ -185,7 +175,7 @@ void M93Cx6::writeDisable()
     pinHigh(_csPin);
     shiftOut(out, _addressLength + 3);
     pinLow(_csPin);
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
 }
 
 uint16_t M93Cx6::shiftIn(uint16_t length)
@@ -193,13 +183,13 @@ uint16_t M93Cx6::shiftIn(uint16_t length)
     uint16_t value = 0;
     for (int i = 0; i < length; i++)
     {
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
         pinHigh(_skPin);
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
         value |= (digitalRead(_diPin) << ((length - 1) - i));
         pinLow(_skPin);
     }
-    PIN_DELAY;
+    delayMicroseconds(_pinDelay);
     return value;
 }
 
@@ -208,9 +198,9 @@ void M93Cx6::shiftOut(uint16_t data, uint8_t length)
     for (int i = 0; i < length; i++)
     {
         ((data & (1 << ((length - 1) - i))) ? pinHigh(_doPin) : pinLow(_doPin));
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
         pinHigh(_skPin);
-        PIN_DELAY;
+        delayMicroseconds(_pinDelay);
         pinLow(_skPin);
     }
 }

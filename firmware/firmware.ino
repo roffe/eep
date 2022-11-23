@@ -1,13 +1,4 @@
-#ifndef USE_EEPROM
-#define USE_EEPROM
-#endif
-
 #include <Arduino.h>
-
-#ifdef USE_EEPROM
-#include <EEPROM.h>
-#endif
-
 #include "M93Cx6.h"
 
 #define PWR_PIN 9
@@ -17,51 +8,29 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN);
+M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 200);
 
-int chipAddr = 0x08;
-int orgAddr = 0x10;
-int sizeAddr = 0x20;
-
-static uint8_t cfgChip;
-static uint16_t cfgSize;
-static uint8_t cfgOrg;
+static uint8_t cfgChip = 66;
+static uint16_t cfgSize = 512;
+static uint8_t cfgOrg = 8;
+static uint16_t cfgDelay = 200;
 
 void setup()
 {
     Serial.begin(57600);
-
-#ifdef USE_EEPROM
-    // load settings from eeprom
-    loadSettings();
-#endif
-
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        delay(5); // wait for serial port to connect. Needed for native USB
+        delay(10); // wait for serial port to connect. Needed for native USB
     }
-    Serial.println();
+    delay(250);
+    Serial.write("\n");
 }
 
 void loop()
 {
     handleSerial();
 }
-
-#ifdef USE_EEPROM
-void loadSettings()
-{
-    if (EEPROM.read(0x00) == 0x20)
-    {
-        cfgChip = EEPROM.read(chipAddr);
-        EEPROM.get(sizeAddr, cfgSize);
-        cfgOrg = EEPROM.read(orgAddr);
-        ep.setChip(cfgChip);
-        ep.setOrg(cfgOrg);
-    }
-}
-#endif
 
 static uint8_t bufferLength;       // number of characters currently in the buffer
 const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
@@ -119,7 +88,7 @@ void handleCmd(char *msg)
         return;
     case 's':
         parse(msg);
-        Serial.println();
+        Serial.write("\n");
         return;
     case 'w':
     case 'r':
@@ -160,7 +129,7 @@ void handleCmd(char *msg)
         break;
     }
 
-    delayMicroseconds(50);
+    delay(5);
     ep.powerDown();
     ledOff();
 }
@@ -181,6 +150,9 @@ void parse(char *msg)
     pos = strtok(NULL, ",");
     cfgOrg = atoi(pos);
 
+    pos = strtok(NULL, ",");
+    cfgDelay = atoi(pos);
+
     if (cfgSize == 0)
     {
         Serial.println("\ainvalid size");
@@ -197,12 +169,10 @@ void parse(char *msg)
         return;
     }
 
-#ifdef USE_EEPROM
-    EEPROM.put(chipAddr, cfgChip);
-    EEPROM.put(orgAddr, cfgOrg);
-    EEPROM.put(sizeAddr, cfgSize);
-    EEPROM.put(0x00, 0x20); // if this is not 0x20 settings will not be loaded from eeprom
-#endif
+    if (!setDelay())
+    {
+        return;
+    }
 }
 
 bool setChip()
@@ -239,9 +209,6 @@ bool setOrg()
     case 8:
         ep.setOrg(ORG_8);
         break;
-    case 16:
-        ep.setOrg(ORG_16);
-        break;
     default:
         Serial.println("\ainvalid org");
         return false;
@@ -250,10 +217,16 @@ bool setOrg()
     return true;
 }
 
+bool setDelay()
+{
+    ep.setPinDelay(cfgDelay);
+    return true;
+}
+
 void help()
 {
     Serial.println("--- eep ---");
-    Serial.println("s,<chip>,<size>,<org> - Set eeprom configuration");
+    Serial.println("s,<chip>,<size>,<org>,<pin_delay> - Set configuration");
     Serial.println("? - Print current configuration");
     Serial.println("r - Read eeprom");
     Serial.println("w - Initiate write mode");
@@ -271,6 +244,8 @@ void settings()
     Serial.println(cfgSize);
     Serial.print("org: ");
     Serial.println(cfgOrg);
+    Serial.print("delay: ");
+    Serial.println(cfgDelay);
 }
 
 void read()
@@ -279,61 +254,29 @@ void read()
     uint16_t c = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        c = ep.read(i);
-        switch (cfgOrg)
-        {
-        case 8:
-            Serial.write(c);
-            break;
-        case 16:
-            Serial.write(c >> 8);
-            Serial.write(c & 0xFF);
-            break;
-        }
+        Serial.write(ep.read(i));
     }
-    Serial.println();
+    Serial.write("\n");
 }
 
 static unsigned long lastData;
-
 void write()
 {
     lastData = millis();
     ep.writeEnable();
-    uint8_t buff[2];
-    uint8_t pos = 0;
-
     Serial.write('\f');
     for (uint16_t i = 0; i < cfgSize; i++)
     {
         while (Serial.available() == 0)
         {
-            if ((millis() - lastData) > 2000)
+            if ((millis() - lastData) > 1000)
             {
                 ep.writeDisable();
                 Serial.println("\adata read timeout");
                 return;
             }
         }
-        switch (cfgOrg)
-        {
-        case 8:
-            ep.write(i, Serial.read());
-            break;
-
-        case 16:
-            if (pos == 2)
-            {
-                uint16_t wd = ((uint16_t)buff[1] << 8) | buff[0];
-                ep.write(i, wd);
-                pos = 0;
-                break;
-            }
-            buff[pos++] = Serial.read();
-            i--;
-            break;
-        }
-
+        ep.write(i, Serial.read());
         lastData = millis();
         Serial.print("\f");
     }
@@ -374,11 +317,11 @@ void printBin()
         linePos++;
         if (linePos == 24)
         {
-            Serial.println();
+            Serial.write("\n");
             linePos = 0;
         }
     }
-    Serial.println();
+    Serial.write("\n");
     ledOff();
 }
 
