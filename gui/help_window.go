@@ -77,10 +77,6 @@ func newHelpWindow(e *EEPGui) *helpWindow {
 	return hw
 }
 
-func (hw *helpWindow) Show() {
-	hw.w.Show()
-}
-
 func (hw *helpWindow) layout() fyne.CanvasObject {
 	header := widget.NewLabelWithStyle("Welcome to the CIM Tool!", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	footer := container.NewVBox()

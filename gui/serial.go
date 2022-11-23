@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/roffe/cim/pkg/cim"
 	"go.bug.st/serial"
+	"go.bug.st/serial/enumerator"
 )
 
 const (
@@ -17,6 +18,50 @@ const (
 	opRead  = "r"
 	opErase = "e"
 )
+
+func (m *mainWindow) listPorts() []string {
+	var portsList []string
+	ports, err := enumerator.GetDetailedPortsList()
+	if err != nil {
+		m.output(err.Error())
+		return []string{}
+	}
+	if len(ports) == 0 {
+		m.output("No serial ports found!")
+		return []string{}
+	}
+
+	/*
+		for i := 0; i < 6; i++ {
+			ports = append(ports, &enumerator.PortDetails{
+				Name:         fmt.Sprintf("Dummy%d", i),
+				VID:          strconv.Itoa(i),
+				PID:          strconv.Itoa(i),
+				SerialNumber: "foo",
+				IsUSB:        true,
+			})
+		}
+	*/
+
+	m.output("Detected ports")
+	for i, port := range ports {
+		pref := " "
+		jun := "┗"
+		if len(ports) > 1 && i+1 < len(ports) {
+			pref = "┃"
+			jun = "┣"
+		}
+
+		m.output("  %s %s", jun, port.Name)
+		if port.IsUSB {
+			m.output("  %s  ┣ USB ID: %s:%s", pref, port.VID, port.PID)
+			m.output("  %s  ┗ USB serial: %s", pref, port.SerialNumber)
+			portsList = append(portsList, port.Name)
+		}
+	}
+	m.e.state.portList = portsList
+	return portsList
+}
 
 func (m *mainWindow) openPort(port string) (serial.Port, error) {
 	mode := &serial.Mode{

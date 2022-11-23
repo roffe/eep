@@ -20,6 +20,8 @@ type settingsWindow struct {
 
 func newSettingsWindow(e *EEPGui) *settingsWindow {
 	w := e.app.NewWindow("Settings")
+	w.CenterOnScreen()
+
 	sw := &settingsWindow{
 		e:                e,
 		w:                w,
@@ -57,14 +59,9 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 		w.Hide()
 	})
 
-	w.CenterOnScreen()
-	w.Resize(fyne.NewSize(300, 110))
 	sw.w.SetContent(sw.layout())
+	w.Resize(fyne.NewSize(300, 110))
 	return sw
-}
-
-func (sw *settingsWindow) Show() {
-	sw.w.Show()
 }
 
 func (sw *settingsWindow) layout() fyne.CanvasObject {

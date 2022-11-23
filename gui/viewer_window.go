@@ -50,9 +50,8 @@ func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose boo
 	for i, row := range generateGrid(vw.data) {
 		vw.grid.SetRow(i, row)
 	}
+
 	w.SetContent(vw.layout())
-	w.Resize(fyne.NewSize(256, 256))
-	w.SetFixedSize(true)
 	w.Show()
 	return vw
 }
@@ -73,10 +72,6 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 					vw.grid.SetCell(i, j, c)
 				}
 			}
-		}),
-		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			vw.e.hw.Show()
 		}),
 	)
 }

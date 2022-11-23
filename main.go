@@ -2,9 +2,7 @@ package main
 
 import (
 	"log"
-	"os"
 
-	"github.com/Hirschmann-Koxha-GbR/eep/cmd"
 	"github.com/Hirschmann-Koxha-GbR/eep/gui"
 )
 
@@ -13,9 +11,5 @@ func init() {
 }
 
 func main() {
-	if len(os.Args) > 1 {
-		cmd.Execute()
-	} else {
-		gui.Run()
-	}
+	gui.Run()
 }

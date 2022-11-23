@@ -14,7 +14,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	sdialog "github.com/sqweek/dialog"
-	"go.bug.st/serial/enumerator"
 )
 
 type mainWindow struct {
@@ -37,11 +36,10 @@ type mainWindow struct {
 
 func newMainWindow(e *EEPGui) *mainWindow {
 	window := e.app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
-	window.Resize(fyne.NewSize(1200, 600))
-	window.CenterOnScreen()
+	window.SetMaster()
 	m := &mainWindow{e: e, w: window}
 	window.SetContent(m.layout())
-	window.SetMaster()
+	window.Resize(fyne.NewSize(1200, 600))
 	window.Show()
 	return m
 }
@@ -81,19 +79,18 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 		m.eraseButton,
 		layout.NewSpacer(),
 		widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-			m.e.hw.Show()
+			m.e.hw.w.Show()
 		}),
 		widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
 			if content, err := m.logList.Get(); err == nil {
-				m.e.mw.w.Clipboard().SetContent(strings.Join(content, "\n"))
+				m.w.Clipboard().SetContent(strings.Join(content, "\n"))
 			}
 		}),
 		widget.NewButtonWithIcon("Clear log", theme.ContentClearIcon(), func() {
 			m.logList.Set([]string{})
 		}),
 		widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-			m.e.sw.Show()
-
+			m.e.sw.w.Show()
 		}),
 	)
 
@@ -102,25 +99,6 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	view := container.NewVSplit(split, m.progressBar)
 	view.Offset = 1
 	return view
-}
-
-func createLogList(listData binding.StringList) *widget.List {
-	return widget.NewListWithData(
-		listData,
-		func() fyne.CanvasObject {
-			w := widget.NewLabel("")
-			w.TextStyle.Monospace = true
-			return w
-		},
-		func(item binding.DataItem, obj fyne.CanvasObject) {
-			i := item.(binding.String)
-			txt, err := i.Get()
-			if err != nil {
-				panic(err)
-			}
-			obj.(*widget.Label).SetText(txt)
-		},
-	)
 }
 
 func (m *mainWindow) viewClickHandler() {
@@ -299,48 +277,23 @@ func (m *mainWindow) printKV(k, v string) {
 	m.output(k + ": " + v)
 }
 
-func (m *mainWindow) listPorts() []string {
-	var portsList []string
-	ports, err := enumerator.GetDetailedPortsList()
-	if err != nil {
-		m.output(err.Error())
-		return []string{}
-	}
-	if len(ports) == 0 {
-		m.output("No serial ports found!")
-		return []string{}
-	}
-
-	/*
-		for i := 0; i < 6; i++ {
-			ports = append(ports, &enumerator.PortDetails{
-				Name:         fmt.Sprintf("Dummy%d", i),
-				VID:          strconv.Itoa(i),
-				PID:          strconv.Itoa(i),
-				SerialNumber: "foo",
-				IsUSB:        true,
-			})
-		}
-	*/
-
-	m.output("Detected ports")
-	for i, port := range ports {
-		pref := " "
-		jun := "┗"
-		if len(ports) > 1 && i+1 < len(ports) {
-			pref = "┃"
-			jun = "┣"
-		}
-
-		m.output("  %s %s", jun, port.Name)
-		if port.IsUSB {
-			m.output("  %s  ┣ USB ID: %s:%s", pref, port.VID, port.PID)
-			m.output("  %s  ┗ USB serial: %s", pref, port.SerialNumber)
-			portsList = append(portsList, port.Name)
-		}
-	}
-	m.e.state.portList = portsList
-	return portsList
+func createLogList(listData binding.StringList) *widget.List {
+	return widget.NewListWithData(
+		listData,
+		func() fyne.CanvasObject {
+			w := widget.NewLabel("")
+			w.TextStyle.Monospace = true
+			return w
+		},
+		func(item binding.DataItem, obj fyne.CanvasObject) {
+			i := item.(binding.String)
+			txt, err := i.Get()
+			if err != nil {
+				panic(err)
+			}
+			obj.(*widget.Label).SetText(txt)
+		},
+	)
 }
 
 func (m *mainWindow) output(format string, values ...interface{}) int {

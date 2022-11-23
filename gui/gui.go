@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/driver/desktop"
 )
 
 type EEPGui struct {
@@ -37,6 +38,14 @@ func Run() {
 	app := app.NewWithID("com.cimtool")
 	app.SetIcon(appIcon)
 	app.Settings().SetTheme(&gocanTheme{})
+
+	if desk, ok := app.(desktop.App); ok {
+		m := fyne.NewMenu("MyApp",
+			fyne.NewMenuItem("Show", func() {
+				log.Println("Tapped show")
+			}))
+		desk.SetSystemTrayMenu(m)
+	}
 
 	eep := &EEPGui{
 		app: app,
