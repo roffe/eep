@@ -26,6 +26,7 @@ type mainWindow struct {
 	rescanButton *widget.Button
 	portList     *widget.Select
 
+	editButton  *widget.Button
 	viewButton  *widget.Button
 	readButton  *widget.Button
 	writeButton *widget.Button
@@ -63,7 +64,9 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	if m.e.state.port != "" {
 		m.portList.PlaceHolder = m.e.state.port
 	}
-
+	m.editButton = widget.NewButtonWithIcon("Edit", theme.FileIcon(), func() {
+		newEditWindow(m.e)
+	})
 	m.viewButton = widget.NewButtonWithIcon("View", theme.SearchIcon(), m.viewClickHandler)
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)
@@ -73,6 +76,7 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	right := container.NewVBox(
 		m.rescanButton,
 		m.portList,
+		m.editButton,
 		m.viewButton,
 		m.readButton,
 		m.writeButton,

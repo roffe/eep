@@ -1,11 +1,16 @@
 package gui
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/Hirschmann-Koxha-GbR/eep/avr"
 )
 
 type settingsWindow struct {
@@ -16,6 +21,7 @@ type settingsWindow struct {
 	readSlider       *widget.Slider
 	writeSliderLabel *widget.Label
 	writeSlider      *widget.Slider
+	updateButton     *widget.Button
 }
 
 func newSettingsWindow(e *EEPGui) *settingsWindow {
@@ -55,22 +61,47 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 		sw.e.app.Preferences().SetFloat("write_pin_delay", f)
 		sw.e.state.writeDelayValue.Set(f)
 	}
+
+	sw.updateButton = widget.NewButtonWithIcon("Update firmware", theme.WarningIcon(), func() {
+		sw.updateButton.Disable()
+		defer sw.updateButton.Enable()
+
+		sw.e.mw.disableButtons()
+		defer sw.e.mw.enableButtons()
+
+		out, err := avr.Update(sw.e.state.port, sw.e.mw.output)
+		if err != nil {
+			sw.e.mw.output("Error updating: %v", err)
+			return
+		}
+
+		r := bytes.NewReader(out)
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			sw.e.mw.output("%s", scanner.Text())
+		}
+
+	})
+
 	w.SetCloseIntercept(func() {
 		w.Hide()
 	})
 
 	sw.w.SetContent(sw.layout())
-	w.Resize(fyne.NewSize(300, 110))
+	w.Resize(fyne.NewSize(300, 165))
 	return sw
 }
 
 func (sw *settingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
 		sw.ignoreError,
+		layout.NewSpacer(),
 		sw.readSliderLabel,
 		sw.readSlider,
 		sw.writeSliderLabel,
 		sw.writeSlider,
+		layout.NewSpacer(),
+		sw.updateButton,
 	)
 }
 

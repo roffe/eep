@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/cim/pkg/cim"
+	"github.com/Hirschmann-Koxha-GbR/cim/pkg/cim"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )

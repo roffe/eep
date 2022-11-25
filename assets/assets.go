@@ -18,24 +18,24 @@ var overviewBytes []byte
 
 var (
 	PCB = &canvas.Image{
-		ScaleMode: canvas.ImageScaleSmooth,
+		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
-			StaticName:    "pcb.png",
+			StaticName:    "pcb.jpg",
 			StaticContent: pcbBytes},
 	}
 	EEPROM = &canvas.Image{
-		ScaleMode: canvas.ImageScaleSmooth,
+		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
-			StaticName:    "eeprom.png",
+			StaticName:    "eeprom.jpg",
 			StaticContent: eepromBytes},
 	}
 	OVERVIEW = &canvas.Image{
-		ScaleMode: canvas.ImageScaleSmooth,
+		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
-			StaticName:    "overview.png",
+			StaticName:    "overview.jpg",
 			StaticContent: overviewBytes},
 	}
 )

@@ -73,6 +73,5 @@ func Run() {
 	eep.mw = newMainWindow(eep)
 	eep.hw = newHelpWindow(eep)
 	eep.sw = newSettingsWindow(eep)
-
-	eep.app.Run()
+	eep.mw.w.ShowAndRun()
 }

@@ -4,14 +4,9 @@ go 1.17
 
 require (
 	github.com/cheggaaa/pb/v3 v3.0.8
-	github.com/roffe/cim v0.1.2
+	github.com/Hirschmann-Koxha-GbR/cim v0.1.3
 	github.com/spf13/cobra v1.3.0
 	go.bug.st/serial v1.3.5
-)
-
-require (
-	github.com/benoitkugler/textlayout v0.2.0 // indirect
-	github.com/go-text/typesetting v0.0.0-20221012165447-0e1e8228dbc3 // indirect
 )
 
 require (
