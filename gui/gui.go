@@ -1,24 +1,19 @@
 package gui
 
 import (
-	_ "embed"
-	"log"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/driver/desktop"
 )
 
 type EEPGui struct {
 	app   fyne.App
-	state *appState
-	mw    *mainWindow
-	hw    *helpWindow
-	sw    *settingsWindow
+	state *AppState
+	mw    *MainWindow
+	hw    *HelpWindow
+	sw    *SettingsWindow
 }
 
-type appState struct {
+type AppState struct {
 	port            string
 	portList        []string
 	readDelayValue  binding.Float
@@ -26,53 +21,34 @@ type appState struct {
 	ignoreError     binding.Bool
 }
 
-//go:embed Icon.png
-var icon []byte
-var appIcon = fyne.NewStaticResource("icon", icon)
+func Run(a fyne.App) {
+	state := &AppState{
+		port:            a.Preferences().String("port"),
+		readDelayValue:  binding.NewFloat(),
+		writeDelayValue: binding.NewFloat(),
+		ignoreError:     binding.NewBool(),
+	}
 
-func init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
-}
+	r := a.Preferences().FloatWithFallback("read_pin_delay", 100)
+	if err := state.readDelayValue.Set(r); err != nil {
+		panic(err)
+	}
 
-func Run() {
-	app := app.NewWithID("com.cimtool")
-	app.SetIcon(appIcon)
-	app.Settings().SetTheme(&gocanTheme{})
+	w := a.Preferences().FloatWithFallback("write_pin_delay", 200)
+	if err := state.writeDelayValue.Set(w); err != nil {
+		panic(err)
+	}
 
-	if desk, ok := app.(desktop.App); ok {
-		m := fyne.NewMenu("MyApp",
-			fyne.NewMenuItem("Show", func() {
-				log.Println("Tapped show")
-			}))
-		desk.SetSystemTrayMenu(m)
+	ignoreError := a.Preferences().BoolWithFallback("ignore_read_errors", false)
+	if err := state.ignoreError.Set(ignoreError); err != nil {
+		panic(err)
 	}
 
 	eep := &EEPGui{
-		app: app,
-		state: &appState{
-			port:            app.Preferences().String("port"),
-			readDelayValue:  binding.NewFloat(),
-			writeDelayValue: binding.NewFloat(),
-			ignoreError:     binding.NewBool(),
-		},
+		app:   a,
+		state: state,
 	}
 
-	r := app.Preferences().Float("read_pin_delay")
-	if r < 20 {
-		r = 100
-	}
-	eep.state.readDelayValue.Set(r)
-
-	w := app.Preferences().Float("write_pin_delay")
-	if r < 100 {
-		r = 200
-	}
-	eep.state.writeDelayValue.Set(w)
-	eep.state.ignoreError.Set(app.Preferences().Bool("ignore_read_errors"))
-
-	eep.mw = newMainWindow(eep)
-	eep.hw = newHelpWindow(eep)
-	eep.sw = newSettingsWindow(eep)
-
-	eep.app.Run()
+	eep.mw = NewMainWindow(eep)
+	a.Run()
 }

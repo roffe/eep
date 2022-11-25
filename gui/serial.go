@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/cim/pkg/cim"
+	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -19,7 +19,7 @@ const (
 	opErase = "e"
 )
 
-func (m *mainWindow) listPorts() []string {
+func (m *MainWindow) listPorts() []string {
 	var portsList []string
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
@@ -63,7 +63,7 @@ func (m *mainWindow) listPorts() []string {
 	return portsList
 }
 
-func (m *mainWindow) openPort(port string) (serial.Port, error) {
+func (m *MainWindow) openPort(port string) (serial.Port, error) {
 	mode := &serial.Mode{
 		BaudRate: 57600,
 		DataBits: 8,
@@ -80,14 +80,14 @@ func (m *mainWindow) openPort(port string) (serial.Port, error) {
 		return nil, err
 	}
 
-	if err := waitAck(sr, '\n'); err != nil {
+	if err := waitAck(sr, '\n', 3*time.Second); err != nil {
 		return sr, err
 	}
 	m.append("Done")
 	return sr, nil
 }
 
-func (m *mainWindow) writeCIM(port string, data []byte) bool {
+func (m *MainWindow) writeCIM(port string, data []byte) bool {
 	sr, err := m.openPort(m.e.state.port)
 	if sr != nil {
 		defer sr.Close()
@@ -103,7 +103,7 @@ func (m *mainWindow) writeCIM(port string, data []byte) bool {
 	return true
 }
 
-func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
+func (m *MainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
 	sr, err := m.openPort(m.e.state.port)
 	if sr != nil {
 		defer sr.Close()
@@ -133,7 +133,7 @@ func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
 	return rawBytes, bin, nil
 }
 
-func (m *mainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
+func (m *MainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 	bin, err := m.read(ctx, sr, 66, 512, 8, m.progressBar)
@@ -144,7 +144,7 @@ func (m *mainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	return bin, cb, err
 }
 
-func waitAck(stream serial.Port, char byte) error {
+func waitAck(stream serial.Port, char byte, timeout time.Duration) error {
 	start := time.Now()
 	readBuffer := make([]byte, 1)
 	for {
@@ -152,8 +152,8 @@ func waitAck(stream serial.Port, char byte) error {
 		if err != nil {
 			return err
 		}
-		if time.Since(start) > 3*time.Second {
-			return errors.New("got no ack")
+		if time.Since(start) > timeout {
+			return errors.New("got no response from adapter")
 		}
 		if n == 0 {
 			continue
@@ -177,7 +177,7 @@ func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, 
 	return nil
 }
 
-func (m *mainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
+func (m *MainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
 	f, err := m.e.state.readDelayValue.Get()
 	if err != nil {
 		return nil, err
@@ -185,12 +185,7 @@ func (m *mainWindow) read(ctx context.Context, stream serial.Port, chip uint8, s
 	if err := sendCMD(stream, opRead, chip, size, org, uint8(f)); err != nil {
 		return nil, err
 	}
-	out, err := readBytes(ctx, stream, p)
-	if err != nil {
-		return nil, err
-	}
-
-	return out, nil
+	return readBytes(ctx, stream, p)
 }
 
 func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) ([]byte, error) {
@@ -205,8 +200,7 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 			return out, ctx.Err()
 		default:
 		}
-		if time.Since(lastRead) > 2*time.Second {
-			log.Printf("%X", out)
+		if time.Since(lastRead) > 1*time.Second {
 			return nil, errors.New("Timeout reading eeprom") //lint:ignore ST1005 ignore this
 		}
 		n, err := stream.Read(readBuffer)
@@ -231,7 +225,7 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 	return out, nil
 }
 
-func (m *mainWindow) erase(stream serial.Port) error {
+func (m *MainWindow) erase(stream serial.Port) error {
 	f, err := m.e.state.writeDelayValue.Get()
 	if err != nil {
 		return err
@@ -242,7 +236,7 @@ func (m *mainWindow) erase(stream serial.Port) error {
 	if err := sendCMD(stream, opErase, 66, 1, 8, uint8(f)); err != nil {
 		return err
 	}
-	if err := waitAck(stream, '\a'); err != nil {
+	if err := waitAck(stream, '\a', 3*time.Second); err != nil {
 		return err
 	}
 	time.Sleep(20 * time.Millisecond)
@@ -250,7 +244,7 @@ func (m *mainWindow) erase(stream serial.Port) error {
 	return nil
 }
 
-func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
+func (m *MainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
 	f, err := m.e.state.writeDelayValue.Get()
 	if err != nil {
 		return err
@@ -258,7 +252,7 @@ func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 	if err := sendCMD(stream, opWrite, 66, 512, 8, uint8(f)); err != nil {
 		return err
 	}
-	if err := waitAck(stream, '\f'); err != nil {
+	if err := waitAck(stream, '\f', 3*time.Second); err != nil {
 		return err
 	}
 

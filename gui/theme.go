@@ -9,9 +9,9 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-type gocanTheme struct{}
+type Theme struct{}
 
-func (gocanTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
+func (Theme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	switch c {
 	case theme.ColorNameBackground:
 		return color.NRGBA{R: 0x30, G: 0x30, B: 0x30, A: 0xff}
@@ -46,7 +46,7 @@ func (gocanTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color 
 	}
 }
 
-func (gocanTheme) Font(s fyne.TextStyle) fyne.Resource {
+func (Theme) Font(s fyne.TextStyle) fyne.Resource {
 	if s.Monospace {
 		return theme.DefaultTheme().Font(s)
 	}
@@ -62,11 +62,11 @@ func (gocanTheme) Font(s fyne.TextStyle) fyne.Resource {
 	return theme.DefaultTheme().Font(s)
 }
 
-func (gocanTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
+func (Theme) Icon(n fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(n)
 }
 
-func (gocanTheme) Size(s fyne.ThemeSizeName) float32 {
+func (Theme) Size(s fyne.ThemeSizeName) float32 {
 	switch s {
 	case theme.SizeNameCaptionText:
 		return 11
