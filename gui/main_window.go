@@ -3,6 +3,7 @@ package gui
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	sdialog "github.com/sqweek/dialog"
 )
 
-type mainWindow struct {
+type MainWindow struct {
 	e *EEPGui
 	w fyne.Window
 
@@ -35,25 +36,24 @@ type mainWindow struct {
 	progressBar *widget.ProgressBar
 }
 
-func newMainWindow(e *EEPGui) *mainWindow {
-	window := e.app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
-	window.SetMaster()
-	m := &mainWindow{e: e, w: window}
-	window.SetContent(m.layout())
-	window.Resize(fyne.NewSize(1200, 600))
-	window.Show()
+func NewMainWindow(e *EEPGui) *MainWindow {
+	w := e.app.NewWindow("Saab CIM Cloner by Hirschmann-Koxha GbR")
+	w.SetMaster()
+	m := &MainWindow{e: e, w: w}
+	w.SetContent(m.layout())
+	w.Resize(fyne.NewSize(1200, 600))
+	w.Show()
 	return m
 }
 
-func (m *mainWindow) layout() fyne.CanvasObject {
+func (m *MainWindow) layout() fyne.CanvasObject {
 	logList := binding.NewStringList()
 	m.logList = logList
+
 	m.log = createLogList(logList)
 	m.progressBar = widget.NewProgressBar()
 
-	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() {
-		m.portList.Options = m.listPorts()
-	})
+	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() { m.portList.Options = m.listPorts() })
 
 	m.portList = widget.NewSelect(m.listPorts(), func(s string) {
 		m.e.state.port = s
@@ -64,9 +64,9 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	if m.e.state.port != "" {
 		m.portList.PlaceHolder = m.e.state.port
 	}
-	m.editButton = widget.NewButtonWithIcon("Edit", theme.FileIcon(), func() {
-		newEditWindow(m.e)
-	})
+
+	m.editButton = widget.NewButtonWithIcon("Edit", theme.FileIcon(), func() { NewEditWindow(m.e) })
+
 	m.viewButton = widget.NewButtonWithIcon("View", theme.SearchIcon(), m.viewClickHandler)
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)
@@ -76,14 +76,18 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	right := container.NewVBox(
 		m.rescanButton,
 		m.portList,
-		m.editButton,
+		//m.editButton,
 		m.viewButton,
 		m.readButton,
 		m.writeButton,
 		m.eraseButton,
 		layout.NewSpacer(),
 		widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-			m.e.hw.w.Show()
+			if m.e.hw == nil {
+				m.e.hw = NewHelpWindow(m.e)
+			} else {
+				m.e.hw.w.RequestFocus()
+			}
 		}),
 		widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
 			if content, err := m.logList.Get(); err == nil {
@@ -94,7 +98,11 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.logList.Set([]string{})
 		}),
 		widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-			m.e.sw.w.Show()
+			if m.e.sw == nil {
+				m.e.sw = NewSettingsWindow(m.e)
+			} else {
+				m.e.sw.w.RequestFocus()
+			}
 		}),
 	)
 
@@ -105,7 +113,7 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 	return view
 }
 
-func (m *mainWindow) viewClickHandler() {
+func (m *MainWindow) viewClickHandler() {
 	m.viewButton.Disable()
 	go func() {
 		defer m.viewButton.Enable()
@@ -125,9 +133,10 @@ func (m *mainWindow) viewClickHandler() {
 		}
 		newViewerWindow(m.e, filename, bin, false)
 	}()
+
 }
 
-func (m *mainWindow) readClickHandler() {
+func (m *MainWindow) readClickHandler() {
 	go func() {
 		m.disableButtons()
 		defer m.enableButtons()
@@ -141,8 +150,11 @@ func (m *mainWindow) readClickHandler() {
 		rawBytes, bin, err := m.readCIM(m.e.state.port, 1)
 		if err != nil {
 			m.output(err.Error())
+			if err.Error() == "Timeout reading eeprom" {
+				return
+			}
 			if ignoreReadErrors {
-				m.saveFile(rawBytes)
+				m.saveFile("Save raw bin file", rawBytes)
 			} else {
 				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(b bool) {
 					if b {
@@ -162,7 +174,7 @@ func (m *mainWindow) readClickHandler() {
 		m.printKV("MD5", bin.MD5())
 		m.printKV("CRC32", bin.CRC32())
 		m.printKV("VIN", bin.Vin.Data)
-		m.printKV("MY", bin.Vin.Data[9:10])
+		m.printKV("MY", myToNumber(bin.Vin.Data[9:10]))
 		m.printKV("End model (HW+SW)", fmt.Sprintf("%d%s", bin.PartNo1, bin.PartNo1Rev))
 		m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
 		m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
@@ -173,72 +185,92 @@ func (m *mainWindow) readClickHandler() {
 	}()
 }
 
-func (m *mainWindow) writeClickHandler() {
-	go func() {
-		if m.e.state.port == "" {
-			m.output("Please select a port first")
+func myToNumber(s string) string {
+	if s == " " {
+		return s
+	}
+	switch strings.ToLower(s) {
+	case "a":
+		s = "10"
+	case "b":
+		s = "11"
+	case "c":
+		s = "12"
+	case "d":
+		s = "13"
+	case "e":
+		s = "14"
+	case "f":
+		s = "15"
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return "error parsing MY"
+	}
+	return fmt.Sprintf("%02d", v)
+}
+
+func (m *MainWindow) writeClickHandler() {
+	if m.e.state.port == "" {
+		m.output("Please select a port first")
+		return
+	}
+
+	filename, bin, err := loadFile()
+	if err != nil {
+		if err.Error() == "Cancelled" {
 			return
 		}
-		m.disableButtons()
-		defer m.enableButtons()
+		m.output(err.Error())
+		return
+	}
 
-		filename, bin, err := loadFile()
-		if err != nil {
-			if err.Error() == "Cancelled" {
+	dialog.ShowConfirm("Write to cim?", "Continue writing to CIM?", func(ok bool) {
+		if ok {
+			m.output("Flashing CIM ... ")
+			start := time.Now()
+			if ok := m.writeCIM(m.e.state.port, bin); !ok {
 				return
 			}
-			m.output(err.Error())
-			return
+			m.output("Flashed %s, took %s", filename, time.Since(start).String())
 		}
-
-		ok := sdialog.Message("%s", "Do you want to continue?").Title("Are you sure?").YesNo()
-		if !ok {
-			return
-		}
-		m.output("Flashing CIM ... ")
-		start := time.Now()
-		if ok := m.writeCIM(m.e.state.port, bin); !ok {
-			return
-		}
-		m.output("Flashed %s, took %s", filename, time.Since(start).String())
-	}()
+	}, m.w)
 }
 
-func (m *mainWindow) eraseClickHandler() {
+func (m *MainWindow) eraseClickHandler() {
 	go func() {
 		if m.e.state.port == "" {
 			m.output("Please select a port first")
 			return
 		}
-		m.disableButtons()
-		defer m.enableButtons()
 
-		ok := sdialog.Message("%s", "Do you want to erase CIM?").Title("Are you sure?").YesNo()
-		if !ok {
-			return
-		}
-		start := time.Now()
-		sr, err := m.openPort(m.e.state.port)
-		if sr != nil {
-			defer sr.Close()
-		}
+		dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(b bool) {
+			if b {
+				start := time.Now()
+				sr, err := m.openPort(m.e.state.port)
+				if sr != nil {
+					defer sr.Close()
+				}
 
-		if err != nil {
-			m.output("Failed to init adapter: %v", err)
-			return
-		}
+				if err != nil {
+					m.output("Failed to init adapter: %v", err)
+					return
+				}
 
-		m.output("Erasing ... ")
-		if err := m.erase(sr); err != nil {
-			m.output(err.Error())
-		}
+				m.output("Erasing ... ")
+				if err := m.erase(sr); err != nil {
+					m.output(err.Error())
+				}
 
-		m.output("Erase took %s", time.Since(start).String())
+				m.output("Erase took %s", time.Since(start).String())
+			}
+		}, m.w)
+
 	}()
 }
 
-func (m *mainWindow) saveFile(data []byte) bool {
-	filename, err := sdialog.File().Filter("Bin file", "bin").Title("Save bin file").Save()
+func (m *MainWindow) saveFile(title string, data []byte) bool {
+	filename, err := sdialog.File().Filter("Bin file", "bin").Title(title).Save()
 	if err != nil {
 		if err.Error() == "Cancelled" {
 			return false
@@ -277,7 +309,7 @@ func addSuffix(s, suffix string) string {
 	return s
 }
 
-func (m *mainWindow) printKV(k, v string) {
+func (m *MainWindow) printKV(k, v string) {
 	m.output(k + ": " + v)
 }
 
@@ -300,7 +332,7 @@ func createLogList(listData binding.StringList) *widget.List {
 	)
 }
 
-func (m *mainWindow) output(format string, values ...interface{}) int {
+func (m *MainWindow) output(format string, values ...interface{}) int {
 	var text string
 	if format != "" {
 		text = fmt.Sprintf("%s - %s", time.Now().Format("15:04:05.000"), fmt.Sprintf(format, values...))
@@ -311,7 +343,7 @@ func (m *mainWindow) output(format string, values ...interface{}) int {
 	return m.logList.Length()
 }
 
-func (m *mainWindow) append(format string, values ...interface{}) {
+func (m *MainWindow) append(format string, values ...interface{}) {
 	di, err := m.logList.GetValue(m.logList.Length() - 1)
 	if err != nil {
 		panic(err)
@@ -320,7 +352,7 @@ func (m *mainWindow) append(format string, values ...interface{}) {
 	m.log.Refresh()
 }
 
-func (m *mainWindow) disableButtons() {
+func (m *MainWindow) disableButtons() {
 	m.rescanButton.Disable()
 	m.portList.Disable()
 	//m.viewButton.Disable()
@@ -329,7 +361,7 @@ func (m *mainWindow) disableButtons() {
 	m.eraseButton.Disable()
 }
 
-func (m *mainWindow) enableButtons() {
+func (m *MainWindow) enableButtons() {
 	m.rescanButton.Enable()
 	m.readButton.Enable()
 	m.portList.Enable()

@@ -6,30 +6,27 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/Hirschmann-Koxha-GbR/eep/assets"
+	"github.com/hirschmann-koxha-gbr/eep/assets"
 )
 
-type helpWindow struct {
+type HelpWindow struct {
 	e *EEPGui
 	w fyne.Window
 
 	tabs *container.AppTabs
 }
 
-func newHelpWindow(e *EEPGui) *helpWindow {
+func NewHelpWindow(e *EEPGui) *HelpWindow {
 	w := e.app.NewWindow("Help")
-	//w.Resize(fyne.NewSize(1000, 850))
-	w.SetCloseIntercept(func() {
-		w.Hide()
+	hw := &HelpWindow{e: e, w: w}
+	w.SetOnClosed(func() {
+		e.hw = nil
 	})
-	hw := &helpWindow{e: e, w: w}
-	hw.w.Resize(fyne.NewSize(1000, 850))
-
 	introTab := container.NewTabItemWithIcon("Intro", theme.QuestionIcon(),
 		container.NewVScroll(
 			container.NewVBox(
 				widget.NewLabelWithStyle("To access the storage of your CIM, you need to connect your SOP8 clip to the EEPROM", fyne.TextAlignCenter, fyne.TextStyle{}),
-				container.NewCenter(container.NewMax(assets.PCB)),
+				container.NewCenter(container.NewMax(assets.PCB())),
 				widget.NewSeparator(),
 				widget.NewLabelWithStyle("It is necessary to remove any conformal coating from the legs of the EEPROM. This can be achieved by the use of a sharp knife or razor blade", fyne.TextAlignCenter, fyne.TextStyle{}),
 				widget.NewLabelWithStyle("then clean with IPA / acetone using cotton swabs", fyne.TextAlignCenter, fyne.TextStyle{}),
@@ -37,10 +34,10 @@ func newHelpWindow(e *EEPGui) *helpWindow {
 				widget.NewLabelWithStyle("Be careful, while attempting to do this. Excessive force could break the legs and therefore, would require a new EEPROM to be soldered in", fyne.TextAlignCenter, fyne.TextStyle{}),
 				widget.NewLabelWithStyle("Before you put the SOP8 clip on you need to make sure that the wire is connected in the right orientation.\nMake sure that the red wire is in the corner of the EEPROM with the indentation shown below.", fyne.TextAlignCenter, fyne.TextStyle{}),
 				widget.NewLabel(""),
-				container.NewCenter(container.NewMax(assets.EEPROM)),
+				container.NewCenter(container.NewMax(assets.EEPROM())),
 				widget.NewLabel(""),
 				widget.NewLabelWithStyle("The result should look like this", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-				container.NewCenter(container.NewMax(assets.OVERVIEW)),
+				container.NewCenter(container.NewMax(assets.OVERVIEW())),
 			),
 		),
 	)
@@ -72,11 +69,12 @@ func newHelpWindow(e *EEPGui) *helpWindow {
 	)
 
 	hw.w.SetContent(hw.layout())
-
+	w.Resize(fyne.NewSize(1000, 850))
+	w.Show()
 	return hw
 }
 
-func (hw *helpWindow) layout() fyne.CanvasObject {
+func (hw *HelpWindow) layout() fyne.CanvasObject {
 	header := widget.NewLabelWithStyle("Welcome to the CIM Tool!", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 	footer := container.NewVBox()
 	return container.New(

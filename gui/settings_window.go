@@ -10,10 +10,10 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/Hirschmann-Koxha-GbR/eep/avr"
+	"github.com/hirschmann-koxha-gbr/eep/avr"
 )
 
-type settingsWindow struct {
+type SettingsWindow struct {
 	e                *EEPGui
 	w                fyne.Window
 	ignoreError      *widget.Check
@@ -24,11 +24,13 @@ type settingsWindow struct {
 	updateButton     *widget.Button
 }
 
-func newSettingsWindow(e *EEPGui) *settingsWindow {
+func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 	w := e.app.NewWindow("Settings")
 	w.CenterOnScreen()
-
-	sw := &settingsWindow{
+	w.SetOnClosed(func() {
+		e.sw = nil
+	})
+	sw := &SettingsWindow{
 		e:                e,
 		w:                w,
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.state.ignoreError),
@@ -83,16 +85,13 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 
 	})
 
-	w.SetCloseIntercept(func() {
-		w.Hide()
-	})
-
 	sw.w.SetContent(sw.layout())
 	w.Resize(fyne.NewSize(300, 165))
+	w.Show()
 	return sw
 }
 
-func (sw *settingsWindow) layout() fyne.CanvasObject {
+func (sw *SettingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
 		sw.ignoreError,
 		layout.NewSpacer(),

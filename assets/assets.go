@@ -16,26 +16,32 @@ var eepromBytes []byte
 //go:embed overview.jpg
 var overviewBytes []byte
 
-var (
-	PCB = &canvas.Image{
+func PCB() fyne.CanvasObject {
+	return &canvas.Image{
 		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
 			StaticName:    "pcb.jpg",
 			StaticContent: pcbBytes},
 	}
-	EEPROM = &canvas.Image{
+}
+
+func EEPROM() fyne.CanvasObject {
+	return &canvas.Image{
 		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
 			StaticName:    "eeprom.jpg",
 			StaticContent: eepromBytes},
 	}
-	OVERVIEW = &canvas.Image{
+}
+
+func OVERVIEW() fyne.CanvasObject {
+	return &canvas.Image{
 		ScaleMode: canvas.ImageScalePixels,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
 			StaticName:    "overview.jpg",
 			StaticContent: overviewBytes},
 	}
-)
+}

@@ -7,26 +7,26 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/Hirschmann-Koxha-GbR/cim/pkg/cim"
+	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
 )
 
-type editWindow struct {
+type EditWindow struct {
 	e   *EEPGui
 	w   fyne.Window
 	bin *cim.Bin
 }
 
-func newEditWindow(e *EEPGui) {
+func NewEditWindow(e *EEPGui) {
 	w := e.app.NewWindow("Editor")
 	w.Resize(fyne.NewSize(450, 600))
 
-	ew := &editWindow{e: e, w: w}
+	ew := &EditWindow{e: e, w: w}
 
 	w.SetContent(ew.layout())
 	w.Show()
 }
 
-func (ew *editWindow) layout() fyne.CanvasObject {
+func (ew *EditWindow) layout() fyne.CanvasObject {
 
 	general := container.NewVBox()
 
@@ -34,28 +34,20 @@ func (ew *editWindow) layout() fyne.CanvasObject {
 		widget.NewLabel("Keys"),
 	}
 	for i := 0; i < 4; i++ {
-		e := widget.NewEntry()
-		e.SetText("00000000")
-		x := container.NewHSplit(
-			widget.NewLabel("#"+strconv.Itoa(i)),
-			e,
-		)
-		x.Offset = 0.1
-		pins = append(pins, x)
+		e := &widget.Entry{
+			Text: "00000000",
+		}
+		pins = append(pins, e)
 	}
 
 	sync := []fyne.CanvasObject{
 		widget.NewLabel("Sync"),
 	}
 	for i := 0; i < 4; i++ {
-		e := widget.NewEntry()
-		e.SetText("00000000")
-		x := container.NewHSplit(
-			widget.NewLabel("#"+strconv.Itoa(i)),
-			e,
-		)
-		x.Offset = 0.1
-		sync = append(sync, x)
+		e := &widget.Entry{
+			Text: "00000000",
+		}
+		sync = append(sync, e)
 	}
 
 	split := container.NewHSplit(
@@ -67,8 +59,15 @@ func (ew *editWindow) layout() fyne.CanvasObject {
 		),
 	)
 
-	keys := container.NewMax(
-		widget.NewLabel("Key errors"),
+	keyErrors := widget.NewEntry()
+	keyErrors.SetText(strconv.Itoa(13))
+	keyErrors.SetMinRowsVisible(8)
+
+	keys := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabel("Key errors:"),
+			keyErrors,
+		),
 		split,
 	)
 
