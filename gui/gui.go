@@ -29,12 +29,12 @@ func Run(a fyne.App) {
 		ignoreError:     binding.NewBool(),
 	}
 
-	r := a.Preferences().FloatWithFallback("read_pin_delay", 100)
+	r := a.Preferences().FloatWithFallback("read_pin_delay", 75)
 	if err := state.readDelayValue.Set(r); err != nil {
 		panic(err)
 	}
 
-	w := a.Preferences().FloatWithFallback("write_pin_delay", 200)
+	w := a.Preferences().FloatWithFallback("write_pin_delay", 150)
 	if err := state.writeDelayValue.Set(w); err != nil {
 		panic(err)
 	}
