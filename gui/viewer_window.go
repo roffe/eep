@@ -22,6 +22,7 @@ type viewerWindow struct {
 	grid    *widget.TextGrid
 	data    []byte
 	saved   bool
+	xor     bool
 }
 
 func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose bool) *viewerWindow {
@@ -65,10 +66,18 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		}),
 		widget.NewToolbarSeparator(),
 		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
-			for i := range vw.data {
-				vw.data[i] ^= 0xff
+			tmpData := make([]byte, len(vw.data))
+			if vw.xor {
+				copy(tmpData, vw.data)
+				vw.xor = false
+			} else {
+				copy(tmpData, vw.data)
+				for i := range tmpData {
+					tmpData[i] ^= 0xff
+				}
+				vw.xor = true
 			}
-			for i, r := range generateGrid(vw.data) {
+			for i, r := range generateGrid(tmpData) {
 				for j, c := range r.Cells {
 					vw.grid.SetCell(i, j, c)
 				}
