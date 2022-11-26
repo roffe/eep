@@ -3,7 +3,6 @@ package gui
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -174,7 +173,7 @@ func (m *MainWindow) readClickHandler() {
 		m.printKV("MD5", bin.MD5())
 		m.printKV("CRC32", bin.CRC32())
 		m.printKV("VIN", bin.Vin.Data)
-		m.printKV("MY", myToNumber(bin.Vin.Data[9:10]))
+		m.printKV("MY", bin.ModelYear())
 		m.printKV("End model (HW+SW)", fmt.Sprintf("%d%s", bin.PartNo1, bin.PartNo1Rev))
 		m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
 		m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
@@ -183,31 +182,6 @@ func (m *MainWindow) readClickHandler() {
 
 		newViewerWindow(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)
 	}()
-}
-
-func myToNumber(s string) string {
-	if s == " " {
-		return s
-	}
-	switch strings.ToLower(s) {
-	case "a":
-		s = "10"
-	case "b":
-		s = "11"
-	case "c":
-		s = "12"
-	case "d":
-		s = "13"
-	case "e":
-		s = "14"
-	case "f":
-		s = "15"
-	}
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		return "error parsing MY"
-	}
-	return fmt.Sprintf("%02d", v)
 }
 
 func (m *MainWindow) writeClickHandler() {

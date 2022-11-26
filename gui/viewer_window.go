@@ -80,27 +80,8 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 				dialog.ShowError(err, vw.w)
 				return
 			}
-			fw.UnknownBytes1 = []byte{255, 32, 32, 32, 32, 32}
-			fw.Vin.Set("")
-			fw.Vin.SetValue(0)
-			fw.Pin.Set("FFFFFFFF")
-			fw.Keys.SetKeyCount(0)
-			for i := 0; i < 4; i++ {
-				fw.Keys.SetKey(uint8(i), []byte{0, 0, 0, 0})
-			}
-			fw.Keys.SetErrorCount(0)
 
-			for i := 0; i < 4; i++ {
-				fw.Sync.SetData(uint8(i), []byte{0, 0, 0, 0})
-			}
-			fw.UnknownData2.Data1 = []byte{0, 0, 0, 0, 0}
-			fw.UnknownData2.Data2 = []byte{0, 0, 0, 0, 0}
-			fw.UnknownData2.Checksum1, fw.UnknownData2.Checksum2 = fw.UnknownData2.Crc16()
-			ud6 := []byte{0, 2, 0, 8, 0, 2, 0, 8, 0, 2, 0, 8, 0, 2, 0, 8, 0, 2, 0, 8}
-			fw.UnknownData6.Data1 = ud6
-			fw.UnknownData6.Data2 = ud6
-			fw.UnknownData6.Checksum1, fw.UnknownData6.Checksum2 = fw.UnknownData6.Crc16()
-
+			fw.Unmarry()
 			b, err := fw.XORBytes()
 			if err != nil {
 				dialog.ShowError(err, vw.w)
@@ -108,7 +89,7 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 			}
 
 			if vw.e.mw.saveFile("Save virginized bin", b) {
-				dialog.ShowInformation("Virgin bin file saved", "The virginized bin file has been saved, write the file to the CIM\nthen read the CIM again to verify the write is correct, else repeat the write process", vw.w)
+				dialog.ShowInformation("File file saved", "The virginized bin file has been saved.", vw.w)
 			}
 		}),
 	)
