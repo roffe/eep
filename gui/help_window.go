@@ -66,8 +66,10 @@ func NewHelpWindow(e *EEPGui) *HelpWindow {
 	Mostly firmware optimization  
 
 	- Optimized Arduino firmware for better performance
-	- Added version string to firmware
-	- Added changelog to help
+	- Added version handshake between adapter and software
+	- Added changelog to help section
+	- Added check for new version on startup
+	- Added version number to settings
 	`
 
 	changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
