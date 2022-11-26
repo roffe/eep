@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/cheggaaa/pb/v3 v3.0.8
-	github.com/hirschmann-koxha-gbr/cim v0.1.8
+	github.com/hirschmann-koxha-gbr/cim v0.1.9
 	github.com/spf13/cobra v1.3.0
 	go.bug.st/serial v1.4.0
 )
