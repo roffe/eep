@@ -62,10 +62,26 @@ func NewHelpWindow(e *EEPGui) *HelpWindow {
 		),
 	)
 
+	changelog := `
+	Mostly firmware optimization  
+
+	- Optimized Arduino firmware for better performance
+	- Added version string to firmware
+	- Added changelog to help
+	`
+
+	changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
+		container.NewVBox(
+			widget.NewLabelWithStyle("v2.0.5", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewRichTextFromMarkdown(changelog),
+		),
+	)
+
 	hw.tabs = container.NewAppTabs(
 		introTab,
 		failedTab,
 		settingsTab,
+		changesTab,
 	)
 
 	hw.w.SetContent(hw.layout())
