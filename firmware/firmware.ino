@@ -8,7 +8,7 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define VERSION "v2.0.5\r"
+#define VERSION "v2.0.5\n"
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 200);
 

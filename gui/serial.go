@@ -1,14 +1,18 @@
 package gui
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
+	"github.com/hirschmann-koxha-gbr/eep/avr"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -75,16 +79,46 @@ func (m *MainWindow) openPort(port string) (serial.Port, error) {
 	if err != nil {
 		return nil, err
 	}
+	sr.ResetInputBuffer()
+	sr.ResetOutputBuffer()
 
 	if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
 		return nil, err
 	}
 
-	if err := waitAck(sr, '\n', 3*time.Second); err != nil {
+	if ver, err := getVersion(sr); err != nil {
 		return sr, err
+	} else {
+		if ver != avr.VERSION {
+			m.output("USB adapter is running wrong software version (%s). Please use settings to update your adapter firmware", ver)
+		}
 	}
-	m.append("Done")
+
 	return sr, nil
+}
+
+func getVersion(stream serial.Port) (string, error) {
+	start := time.Now()
+	var version []byte
+	for {
+		readBuffer := make([]byte, 8)
+		n, err := stream.Read(readBuffer)
+		if err != nil {
+			return "", err
+		}
+		if time.Since(start) > 3*time.Second {
+			return "", errors.New("got no response from adapter")
+		}
+		if n == 0 {
+			continue
+		}
+		for _, b := range readBuffer[:n] {
+			if b == '\n' {
+				return string(version[:]), nil
+			}
+			version = append(version, b)
+		}
+	}
 }
 
 func (m *MainWindow) writeCIM(port string, data []byte) bool {
@@ -97,7 +131,8 @@ func (m *MainWindow) writeCIM(port string, data []byte) bool {
 		return false
 	}
 	if err := m.write(context.TODO(), sr, data); err != nil {
-		m.output("Failed to write: %v", err)
+		//m.output("Failed to write: %v", err)
+		dialog.ShowError(fmt.Errorf("Failed to write %v", err), m.w) //lint:ignore ST1005 ignore
 		return false
 	}
 	return true
@@ -111,8 +146,6 @@ func (m *MainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to init adapter: %v", err) //lint:ignore ST1005 ignore
 	}
-
-	sr.ResetInputBuffer()
 
 	m.progressBar.Max = 512 * float64(count)
 	m.progressBar.SetValue(0)
@@ -142,6 +175,17 @@ func (m *MainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	}
 	cb, err := cim.LoadBytes("read.bin", bin)
 	return bin, cb, err
+}
+
+func (m *MainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
+	f, err := m.e.state.readDelayValue.Get()
+	if err != nil {
+		return nil, err
+	}
+	if err := sendCMD(stream, opRead, chip, size, org, uint8(f)); err != nil {
+		return nil, err
+	}
+	return readBytes(ctx, stream, p)
 }
 
 func waitAck(stream serial.Port, char byte, timeout time.Duration) error {
@@ -177,17 +221,6 @@ func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, 
 	return nil
 }
 
-func (m *MainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
-	f, err := m.e.state.readDelayValue.Get()
-	if err != nil {
-		return nil, err
-	}
-	if err := sendCMD(stream, opRead, chip, size, org, uint8(f)); err != nil {
-		return nil, err
-	}
-	return readBytes(ctx, stream, p)
-}
-
 func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) ([]byte, error) {
 	out := make([]byte, 512)
 	//buff := bytes.NewBuffer(nil)
@@ -200,7 +233,7 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 			return out, ctx.Err()
 		default:
 		}
-		if time.Since(lastRead) > 1*time.Second {
+		if time.Since(lastRead) > 3*time.Second {
 			return nil, errors.New("Timeout reading eeprom") //lint:ignore ST1005 ignore this
 		}
 		n, err := stream.Read(readBuffer)
@@ -280,7 +313,7 @@ func (m *MainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 				select {
 				case <-sendLock:
 				default:
-					panic("korv")
+					dialog.ShowError(errors.New("serial lock error"), m.w)
 				}
 			}
 
@@ -316,10 +349,27 @@ func (m *MainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 
 		}
 	*/
-	for i, b := range data {
-		m.progressBar.SetValue(float64(i))
+
+	r := bytes.NewReader(data)
+
+	buffSize := 16
+	buff := make([]byte, buffSize)
+	rr := 0
+	for {
+		n, err := r.Read(buff)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		if n != buffSize {
+			return errors.New("invalid size on read")
+		}
+		rr += n
+		m.progressBar.SetValue(float64(rr))
 		sendLock <- struct{}{}
-		if _, err := stream.Write([]byte{b}); err != nil {
+		if _, err := stream.Write(buff[:n]); err != nil {
 			return err
 		}
 	}
