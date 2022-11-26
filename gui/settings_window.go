@@ -86,15 +86,15 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 	})
 
 	sw.w.SetContent(sw.layout())
-	w.Resize(fyne.NewSize(300, 165))
+	w.Resize(fyne.NewSize(400, 185))
 	w.Show()
 	return sw
 }
 
 func (sw *SettingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
+		widget.NewLabelWithStyle("Version: "+avr.VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		sw.ignoreError,
-		layout.NewSpacer(),
 		sw.readSliderLabel,
 		sw.readSlider,
 		sw.writeSliderLabel,
