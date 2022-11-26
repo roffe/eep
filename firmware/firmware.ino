@@ -8,6 +8,8 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
+#define VERSION "v2.0.5\r"
+
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 200);
 
 static uint8_t cfgChip = 66;
@@ -21,24 +23,19 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
-        delay(10); // wait for serial port to connect. Needed for native USB
-    }
-    delay(250);
-    Serial.write("\n");
-}
-
-void loop()
-{
-    handleSerial();
+        // wait for serial port to connect. Needed for native USB
+    };
+    delayMicroseconds(199);
+    Serial.write(VERSION);
 }
 
 static uint8_t bufferLength;       // number of characters currently in the buffer
 const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
 static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
 
-void handleSerial()
+void loop()
 {
-    if (Serial.available())
+    if (Serial.available() > 0)
     {
         char c = Serial.read();
         if ((c == '\r' && bufferLength == 0))
@@ -110,9 +107,7 @@ void handleCmd(char *msg)
         parse(msg);
     }
 
-    ledOn();
     ep.powerUp();
-
     switch (msg[0])
     {
     case 'r':
@@ -128,10 +123,7 @@ void handleCmd(char *msg)
         erase();
         break;
     }
-
-    delay(5);
     ep.powerDown();
-    ledOff();
 }
 
 static char *cmd;
@@ -248,15 +240,27 @@ void settings()
     Serial.println(cfgDelay);
 }
 
+const uint8_t readBufferSize = 16;
+static uint8_t readBufferLength = 0;
+static char readBuffer[readBufferSize + 1];
 void read()
 {
-    delay(10);
-    uint16_t c = 0;
+    readBufferLength = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        Serial.write(ep.read(i));
+        readBuffer[readBufferLength++] = ep.read(i);
+        readBuffer[readBufferLength] = 0x00;
+        if (readBufferLength == readBufferSize)
+        {
+            ledOn();
+            for (uint8_t j = 0; j < readBufferLength; j++)
+            {
+                Serial.write(readBuffer[j]);
+            }
+            readBufferLength = 0;
+            ledOff();
+        }
     }
-    Serial.write("\n");
 }
 
 static unsigned long lastData;
@@ -265,23 +269,42 @@ void write()
     lastData = millis();
     ep.writeEnable();
     Serial.write('\f');
-    for (uint16_t i = 0; i < cfgSize; i++)
+    readBufferLength = 0;
+    bool run = true;
+    uint16_t writePos = 0;
+    while (run)
     {
-        while (Serial.available() == 0)
+        if ((millis() - lastData) > 1000)
         {
-            if ((millis() - lastData) > 1000)
-            {
-                ep.writeDisable();
-                Serial.println("\adata read timeout");
-                return;
-            }
+            ep.writeDisable();
+            Serial.println("\adata read timeout");
+            return;
         }
-        ep.write(i, Serial.read());
-        lastData = millis();
-        Serial.print("\f");
+        while (Serial.available() > 0)
+        {
+            readBuffer[readBufferLength++] = Serial.read();
+            readBuffer[readBufferLength] = 0x00;
+
+            if (readBufferLength == readBufferSize)
+            {
+                ledOn();
+                for (uint8_t j = 0; j < readBufferLength; j++)
+                {
+                    ep.write(writePos++, readBuffer[j]);
+                }
+                Serial.print("\f");
+                readBufferLength = 0;
+                ledOff();
+            }
+            lastData = millis();
+        }
+        if (writePos == 512)
+        {
+            run = false;
+        }
     }
     ep.writeDisable();
-    Serial.println("\r\n--- write done ---");
+    Serial.print("\r\n--- write done ---");
 }
 
 void erase()
@@ -292,14 +315,13 @@ void erase()
     Serial.println("\aeeprom erased");
 }
 
-static uint8_t linePos;
 void printBin()
 {
-    linePos = 0;
+    uint8_t linePos = 0;
     char buf[4];
     ledOn();
     Serial.println("--- Hex dump ---");
-    uint16_t c = 0;
+    char c;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
         switch (cfgOrg)
@@ -327,10 +349,12 @@ void printBin()
 
 void ledOn()
 {
-    digitalWrite(LED_BUILTIN, HIGH);
+    // digitalWrite(LED_BUILTIN, HIGH);
+    PORTB |= (B00000001 << (13 - 8));
 }
 
 void ledOff()
 {
-    digitalWrite(LED_BUILTIN, LOW);
+    // digitalWrite(LED_BUILTIN, LOW);
+    PORTB &= (~(B00000001 << (13 - 8)));
 }
