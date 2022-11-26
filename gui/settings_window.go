@@ -37,7 +37,7 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(20, 400, e.state.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
-		writeSlider:      widget.NewSliderWithData(100, 400, e.state.writeDelayValue),
+		writeSlider:      widget.NewSliderWithData(20, 400, e.state.writeDelayValue),
 	}
 
 	if f, err := sw.e.state.readDelayValue.Get(); err == nil {
