@@ -1,8 +1,13 @@
 package gui
 
 import (
+	"net/url"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
+	"github.com/hirschmann-koxha-gbr/eep/avr"
+	"github.com/hirschmann-koxha-gbr/eep/update"
 )
 
 type EEPGui struct {
@@ -50,5 +55,21 @@ func Run(a fyne.App) {
 	}
 
 	eep.mw = NewMainWindow(eep)
+
+	go func() {
+		latest, err := update.GetLatest()
+		if err == nil {
+			if latest.TagName != avr.VERSION {
+				dialog.ShowConfirm("Software update", "There is a new version available, would you like to visit the download page?", func(ok bool) {
+					if ok {
+						u, _ := url.Parse("https://github.com/Hirschmann-Koxha-GbR/eep/releases/latest")
+						eep.app.OpenURL(u)
+					}
+				}, eep.mw.w)
+			}
+		}
+
+	}()
+
 	a.Run()
 }
