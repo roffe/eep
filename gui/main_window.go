@@ -203,10 +203,15 @@ func (m *MainWindow) writeClickHandler() {
 		if ok {
 			m.output("Flashing CIM ... ")
 			start := time.Now()
-			if ok := m.writeCIM(m.e.state.port, bin); !ok {
-				return
-			}
-			m.output("Flashed %s, took %s", filename, time.Since(start).String())
+			go func() {
+				m.disableButtons()
+				defer m.enableButtons()
+				if ok := m.writeCIM(m.e.state.port, bin); !ok {
+					return
+				}
+				m.output("Flashed %s, took %s", filename, time.Since(start).String())
+			}()
+
 		}
 	}, m.w)
 }
