@@ -10,7 +10,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VERSION = "v2.0.6"
+const VERSION = "v2.0.7"
 
 type EEPGui struct {
 	app   fyne.App
