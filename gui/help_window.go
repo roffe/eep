@@ -20,7 +20,6 @@ type HelpWindow struct {
 }
 
 var (
-	latestReleases  []*update.Release
 	getReleasesOnce sync.Once
 	changesContent  []fyne.CanvasObject
 )
@@ -72,23 +71,14 @@ func NewHelpWindow(e *EEPGui) *HelpWindow {
 	)
 
 	getReleasesOnce.Do(func() {
-		latestReleases = append(latestReleases, update.GetReleases()...)
-		for _, rel := range latestReleases {
-			//header := widget.NewLabelWithStyle(rel.TagName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-			header := widget.NewRichTextFromMarkdown("# " + rel.TagName)
-			text := widget.NewRichTextFromMarkdown(rel.Body)
-			changesContent = append(changesContent, header)
-			changesContent = append(changesContent, text)
-			changesContent = append(changesContent, widget.NewSeparator())
-
+		for _, rel := range update.GetReleases() {
+			changesContent = append(changesContent, widget.NewRichTextFromMarkdown("# "+rel.TagName+"  \n\n"+rel.Body))
 		}
 	})
 
 	changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
 		container.NewVScroll(
-			container.NewVBox(
-				changesContent...,
-			),
+			container.NewVBox(changesContent...),
 		),
 	)
 
