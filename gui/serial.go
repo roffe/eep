@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/avast/retry-go/v4"
 	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
-	"github.com/hirschmann-koxha-gbr/eep/avr"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -68,35 +68,49 @@ func (m *MainWindow) listPorts() []string {
 	return portsList
 }
 
+var speeds = []int{57600, 1000000, 57600}
+
 func (m *MainWindow) openPort(port string) (serial.Port, error) {
 	mode := &serial.Mode{
-		BaudRate: 57600,
+		BaudRate: 1000000,
 		DataBits: 8,
 		Parity:   serial.NoParity,
 		StopBits: serial.OneStopBit,
 	}
-	m.output("Init adapter on %q... ", port)
-	sr, err := serial.Open(port, mode)
+	m.output("Open adapter on %q %dkbp/s", port, mode.BaudRate/1000)
+	var sr serial.Port
+	err := retry.Do(func() error {
+		var err error
+		sr, err = serial.Open(port, mode)
+		if err != nil {
+			return err
+		}
+		sr.ResetInputBuffer()
+		sr.ResetOutputBuffer()
+		if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
+			sr.Close()
+			return err
+		}
+
+		if ver, err := getVersion(sr); err != nil {
+			sr.Close()
+			return err
+		} else {
+			if semver.Compare(VERSION, ver) > 0 {
+				m.output("USB adapter is running old wire version (%s). Please use settings to update your adapter firmware", ver)
+			}
+		}
+		return nil
+	},
+		retry.OnRetry(func(n uint, err error) {
+			m.output("trying %dkbp/s", speeds[n]/1000)
+			mode.BaudRate = speeds[n]
+		}),
+		retry.Attempts(3),
+		retry.Delay(200*time.Millisecond),
+	)
 	if err != nil {
 		return nil, err
-	}
-	sr.ResetInputBuffer()
-	sr.ResetOutputBuffer()
-
-	if err := sr.SetReadTimeout(5 * time.Millisecond); err != nil {
-		return nil, err
-	}
-
-	if ver, err := getVersion(sr); err != nil {
-		return sr, err
-	} else {
-		version, err := strconv.Atoi(ver)
-		if err != nil {
-			m.output("Unknown wire version: %s", ver)
-		}
-		if version < avr.WireVersion {
-			m.output("USB adapter is running old wire version (%s). Please use settings to update your adapter firmware", ver)
-		}
 	}
 
 	return sr, nil
