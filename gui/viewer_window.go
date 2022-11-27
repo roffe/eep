@@ -299,10 +299,16 @@ var (
 			color: colorChecksum,
 		},
 		{
-			name:  "Unknown Data 3",
+			name:  "Unknown Data 4",
 			start: 0xc3,
 			end:   0xc4,
 			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 4 CRC",
+			start: 0xc5,
+			end:   0xc6,
+			color: colorChecksum,
 		},
 		{
 			name:  "Unknown Data 1",
@@ -374,7 +380,7 @@ var (
 		{
 			name:  "KEYS ISK High #2",
 			start: 0x122,
-			end:   0x124,
+			end:   0x125,
 			color: rgb(37, 132, 20),
 		},
 		{
