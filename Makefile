@@ -12,4 +12,5 @@ test:
 	go run . read --chip 66 --size 256 --org 16 256_read.bin
 
 gui:
-	fyne package --target windows --icon Icon.png --release
+	fyne package --target windows --icon Icon.png --release 
+# --appVersion $$(git describe --tags `git rev-list --tags --max-count=1`|cut -d"v" -f2)

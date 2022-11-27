@@ -70,7 +70,6 @@ func Run(a fyne.App) {
 				}, eep.mw.w)
 			}
 		}
-
 	}()
 
 	a.Run()
