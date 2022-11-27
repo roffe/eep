@@ -126,18 +126,6 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 			fmt.Sprintf(" SAAB part number: %d", vw.cimBin.PartNo),
 			fmt.Sprintf(" Configuration Version: %d", vw.cimBin.ConfigurationVersion),
 		}
-		/*
-			list := widget.NewList(func() int {
-				return len(infoItems)
-			}, func() fyne.CanvasObject {
-				w := widget.NewLabel("")
-				w.Wrapping = fyne.TextWrapOff
-				w.TextStyle.Monospace = true
-				return w
-			}, func(item widget.ListItemID, obj fyne.CanvasObject) {
-				obj.(*widget.Label).SetText(infoItems[item])
-			})*/
-
 		tg := widget.NewTextGridFromString(strings.Join(infoItems, "\n"))
 		containers = append(containers, tg)
 	}

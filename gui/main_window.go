@@ -305,9 +305,9 @@ func addSuffix(s, suffix string) string {
 	return s
 }
 
-func (m *MainWindow) printKV(k, v string) {
-	m.output(k + ": " + v)
-}
+//func (m *MainWindow) printKV(k, v string) {
+//	m.output(k + ": " + v)
+//}
 
 func createLogList(listData binding.StringList) *widget.List {
 	return widget.NewListWithData(
@@ -339,14 +339,14 @@ func (m *MainWindow) output(format string, values ...interface{}) int {
 	return m.logList.Length()
 }
 
-func (m *MainWindow) append(format string, values ...interface{}) {
-	di, err := m.logList.GetValue(m.logList.Length() - 1)
-	if err != nil {
-		panic(err)
-	}
-	m.logList.SetValue(m.logList.Length()-1, di+fmt.Sprintf(format, values...))
-	m.log.Refresh()
-}
+//func (m *MainWindow) append(format string, values ...interface{}) {
+//	di, err := m.logList.GetValue(m.logList.Length() - 1)
+//	if err != nil {
+//		panic(err)
+//	}
+//	m.logList.SetValue(m.logList.Length()-1, di+fmt.Sprintf(format, values...))
+//	m.log.Refresh()
+//}
 
 func (m *MainWindow) disableButtons() {
 	m.rescanButton.Disable()
