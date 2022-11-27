@@ -119,6 +119,7 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 			fmt.Sprintf("CRC32: %s", vw.cimBin.CRC32()),
 			fmt.Sprintf("VIN: %s", vw.cimBin.Vin.Data),
 			fmt.Sprintf("MY: %s", vw.cimBin.ModelYear()),
+			fmt.Sprintf("SAS: %t", vw.cimBin.SasOpt()),
 			fmt.Sprintf("End model (HW+SW): %d%s", vw.cimBin.PartNo1, vw.cimBin.PartNo1Rev),
 			fmt.Sprintf("Base model (HW+boot): %d%s", vw.cimBin.PnBase1, vw.cimBin.PnBase1Rev),
 			fmt.Sprintf("Delphi part number: %d", vw.cimBin.DelphiPN),
@@ -158,7 +159,7 @@ type colorDesc struct {
 }
 
 var (
-	colorChecksum = rgb(0, 255, 30)
+	colorChecksum = rgb(0, 255, 0)
 	colorUnknown  = rgb(33, 33, 33)
 
 	colorList = []colorDesc{
@@ -272,21 +273,70 @@ var (
 			color: colorChecksum,
 		},
 		{
-			name:  "PIN Data",
+			name:  "PIN Data Bank #1",
 			start: 0xaf,
 			end:   0xb2,
 			color: rgb(56, 89, 217),
 		},
 		{
-			name:  "PIN Unknown",
+			name:  "PIN Unknown Bank #1",
 			start: 0xb3,
 			end:   0xb6,
+			color: colorUnknown,
+		},
+		{
+			name:  "PIN CRC Bank #1",
+			start: 0xb7,
+			end:   0xb8,
+			color: colorChecksum,
+		},
+
+		{
+			name:  "PIN Data Bank #2",
+			start: 0xb9,
+			end:   0xbc,
 			color: rgb(56, 89, 217),
 		},
 		{
-			name:  "PIN CRC",
-			start: 0xb7,
-			end:   0xb8,
+			name:  "PIN Unknown Bank #2",
+			start: 0xbd,
+			end:   0xc0,
+			color: colorUnknown,
+		},
+		{
+			name:  "PIN CRC Bank #2",
+			start: 0xc1,
+			end:   0xc2,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 3",
+			start: 0xc3,
+			end:   0xc4,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 1",
+			start: 0xc7,
+			end:   0xf0,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknwon Data 2 CRC",
+			start: 0xf1,
+			end:   0xf2,
+			color: colorChecksum,
+		},
+		{
+			name:  "Const 1 Data",
+			start: 0xf3,
+			end:   0xfa,
+			color: rgb(40, 5, 113),
+		},
+		{
+			name:  "Const 1 CRC",
+			start: 0xfb,
+			end:   0xfc,
 			color: colorChecksum,
 		},
 		/*
@@ -330,6 +380,18 @@ func generateGrid(data []byte) []widget.TextGridRow {
 			}
 		}
 		var row widget.TextGridRow
+
+		row.Cells = append(row.Cells, widget.TextGridCell{
+			Style: widget.TextGridStyleWhitespace,
+		})
+		row.Cells = append(row.Cells, widget.TextGridCell{
+			Rune:  rune('║'),
+			Style: widget.TextGridStyleWhitespace,
+		})
+		row.Cells = append(row.Cells, widget.TextGridCell{
+			Style: widget.TextGridStyleWhitespace,
+		})
+
 		for x, bb := range buff[:n] {
 			asd := fmt.Sprintf("%02X", bb)
 			row.Cells = append(row.Cells, widget.TextGridCell{
@@ -370,7 +432,13 @@ func generateGrid(data []byte) []widget.TextGridRow {
 		}
 
 		row.Cells = append(row.Cells, widget.TextGridCell{
+			Style: widget.TextGridStyleWhitespace,
+		})
+		row.Cells = append(row.Cells, widget.TextGridCell{
 			Rune:  rune('║'),
+			Style: widget.TextGridStyleWhitespace,
+		})
+		row.Cells = append(row.Cells, widget.TextGridCell{
 			Style: widget.TextGridStyleWhitespace,
 		})
 
