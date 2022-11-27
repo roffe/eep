@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-var VERSION = "v2.0.5"
+const WireVersion = 100
 
 //go:embed firmware.hex
 var firmwareHex []byte
