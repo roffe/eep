@@ -8,7 +8,7 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define VERSION "v2.0.5\n"
+#define WIRE_VERSION "100\n"
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 200);
 
@@ -26,7 +26,7 @@ void setup()
         // wait for serial port to connect. Needed for native USB
     };
     delayMicroseconds(199);
-    Serial.write(VERSION);
+    Serial.write(WIRE_VERSION);
 }
 
 static uint8_t bufferLength;       // number of characters currently in the buffer
