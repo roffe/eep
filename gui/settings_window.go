@@ -35,9 +35,9 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		w:                w,
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.state.ignoreError),
 		readSliderLabel:  widget.NewLabel(""),
-		readSlider:       widget.NewSliderWithData(0, 400, e.state.readDelayValue),
+		readSlider:       widget.NewSliderWithData(0, 255, e.state.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
-		writeSlider:      widget.NewSliderWithData(0, 400, e.state.writeDelayValue),
+		writeSlider:      widget.NewSliderWithData(0, 255, e.state.writeDelayValue),
 	}
 
 	if f, err := sw.e.state.readDelayValue.Get(); err == nil {
