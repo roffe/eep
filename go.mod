@@ -7,12 +7,12 @@ require (
 	github.com/hirschmann-koxha-gbr/cim v0.1.9
 	github.com/spf13/cobra v1.3.0
 	go.bug.st/serial v1.4.0
+	golang.org/x/mod v0.7.0
 )
 
 require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	golang.org/x/mod v0.7.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
