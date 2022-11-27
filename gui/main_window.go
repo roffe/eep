@@ -184,17 +184,17 @@ func (m *MainWindow) readClickHandler() {
 			m.output(err.Error())
 			return
 		}
-
-		m.printKV("MD5", bin.MD5())
-		m.printKV("CRC32", bin.CRC32())
-		m.printKV("VIN", bin.Vin.Data)
-		m.printKV("MY", bin.ModelYear())
-		m.printKV("End model (HW+SW)", fmt.Sprintf("%d%s", bin.PartNo1, bin.PartNo1Rev))
-		m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
-		m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
-		m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
-		m.printKV("Configuration Version", fmt.Sprintf("%d", bin.ConfigurationVersion))
-
+		/*
+			m.printKV("MD5", bin.MD5())
+			m.printKV("CRC32", bin.CRC32())
+			m.printKV("VIN", bin.Vin.Data)
+			m.printKV("MY", bin.ModelYear())
+			m.printKV("End model (HW+SW)", fmt.Sprintf("%d%s", bin.PartNo1, bin.PartNo1Rev))
+			m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
+			m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
+			m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
+			m.printKV("Configuration Version", fmt.Sprintf("%d", bin.ConfigurationVersion))
+		*/
 		newViewerWindow(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)
 	}()
 }
