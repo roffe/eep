@@ -115,16 +115,16 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 	var containers []fyne.CanvasObject
 	if vw.cimBin != nil {
 		infoItems := []string{
-			fmt.Sprintf("MD5: %s", vw.cimBin.MD5()),
-			fmt.Sprintf("CRC32: %s", vw.cimBin.CRC32()),
-			fmt.Sprintf("VIN: %s", vw.cimBin.Vin.Data),
-			fmt.Sprintf("MY: %s", vw.cimBin.ModelYear()),
-			fmt.Sprintf("SAS: %t", vw.cimBin.SasOpt()),
-			fmt.Sprintf("End model (HW+SW): %d%s", vw.cimBin.PartNo1, vw.cimBin.PartNo1Rev),
-			fmt.Sprintf("Base model (HW+boot): %d%s", vw.cimBin.PnBase1, vw.cimBin.PnBase1Rev),
-			fmt.Sprintf("Delphi part number: %d", vw.cimBin.DelphiPN),
-			fmt.Sprintf("SAAB part number: %d", vw.cimBin.PartNo),
-			fmt.Sprintf("Configuration Version: %d", vw.cimBin.ConfigurationVersion),
+			fmt.Sprintf(" MD5: %s", vw.cimBin.MD5()),
+			fmt.Sprintf(" CRC32: %s", vw.cimBin.CRC32()),
+			fmt.Sprintf(" VIN: %s", vw.cimBin.Vin.Data),
+			fmt.Sprintf(" MY: %s", vw.cimBin.ModelYear()),
+			fmt.Sprintf(" SAS: %t", vw.cimBin.SasOpt()),
+			fmt.Sprintf(" End model (HW+SW): %d%s", vw.cimBin.PartNo1, vw.cimBin.PartNo1Rev),
+			fmt.Sprintf(" Base model (HW+boot): %d%s", vw.cimBin.PnBase1, vw.cimBin.PnBase1Rev),
+			fmt.Sprintf(" Delphi part number: %d", vw.cimBin.DelphiPN),
+			fmt.Sprintf(" SAAB part number: %d", vw.cimBin.PartNo),
+			fmt.Sprintf(" Configuration Version: %d", vw.cimBin.ConfigurationVersion),
 		}
 		/*
 			list := widget.NewList(func() int {
@@ -249,62 +249,62 @@ var (
 			color: rgb(72, 140, 38),
 		},
 		{
-			name:  "Unknown Data 3 Bank #1",
+			name:  "Unknown Data 3 #1",
 			start: 0x57,
 			end:   0x80,
 			color: colorUnknown,
 		},
 		{
-			name:  "Unknown Data 3 Bank #1 CRC",
+			name:  "Unknown Data 3 #1 CRC",
 			start: 81,
 			end:   0x82,
 			color: colorChecksum,
 		},
 		{
-			name:  "Unknown Data 3 Bank #2",
+			name:  "Unknown Data 3 #2",
 			start: 0x83,
 			end:   0xac,
 			color: colorUnknown,
 		},
 		{
-			name:  "Unknown Data 3 Bank #2 CRC",
+			name:  "Unknown Data 3 #2 CRC",
 			start: 0xad,
 			end:   0xae,
 			color: colorChecksum,
 		},
 		{
-			name:  "PIN Data Bank #1",
+			name:  "PIN Data #1",
 			start: 0xaf,
 			end:   0xb2,
 			color: rgb(56, 89, 217),
 		},
 		{
-			name:  "PIN Unknown Bank #1",
+			name:  "PIN Unknown #1",
 			start: 0xb3,
 			end:   0xb6,
 			color: colorUnknown,
 		},
 		{
-			name:  "PIN CRC Bank #1",
+			name:  "PIN CRC #1",
 			start: 0xb7,
 			end:   0xb8,
 			color: colorChecksum,
 		},
 
 		{
-			name:  "PIN Data Bank #2",
+			name:  "PIN Data #2",
 			start: 0xb9,
 			end:   0xbc,
 			color: rgb(56, 89, 217),
 		},
 		{
-			name:  "PIN Unknown Bank #2",
+			name:  "PIN Unknown #2",
 			start: 0xbd,
 			end:   0xc0,
 			color: colorUnknown,
 		},
 		{
-			name:  "PIN CRC Bank #2",
+			name:  "PIN CRC #2",
 			start: 0xc1,
 			end:   0xc2,
 			color: colorChecksum,
@@ -339,6 +339,314 @@ var (
 			end:   0xfc,
 			color: colorChecksum,
 		},
+		{
+			name:  "KEYS ISK High #1",
+			start: 0xfd,
+			end:   0x100,
+			color: rgb(37, 132, 20),
+		},
+		{
+			name:  "KEYS ISK Low #1",
+			start: 0x101,
+			end:   0x102,
+			color: rgb(137, 132, 120),
+		},
+		{
+			name:  "KEYS Data #1",
+			start: 0x103,
+			end:   0x116,
+			color: rgb(170, 120, 100),
+		},
+		{
+			name:  "KEYS Count #1",
+			start: 0x117,
+			end:   0x117,
+			color: rgb(170, 120, 100),
+		},
+		{
+			name:  "KEYS Constant #1",
+			start: 0x118,
+			end:   0x11e,
+			color: rgb(60, 40, 90),
+		},
+		{
+			name:  "KEYS Errors #1",
+			start: 0x11f,
+			end:   0x11f,
+			color: rgb(60, 40, 90),
+		},
+		{
+			name:  "KEYS #1 CRC",
+			start: 0x120,
+			end:   0x121,
+			color: colorChecksum,
+		},
+
+		{
+			name:  "KEYS ISK High #2",
+			start: 0x122,
+			end:   0x124,
+			color: rgb(37, 132, 20),
+		},
+		{
+			name:  "KEYS ISK Low #2",
+			start: 0x126,
+			end:   0x127,
+			color: rgb(137, 132, 120),
+		},
+		{
+			name:  "KEYS Data #2",
+			start: 0x128,
+			end:   0x13b,
+			color: rgb(170, 120, 100),
+		},
+		{
+			name:  "KEYS Count #2",
+			start: 0x13c,
+			end:   0x13c,
+			color: rgb(170, 120, 100),
+		},
+		{
+			name:  "KEYS Constant #2",
+			start: 0x13d,
+			end:   0x143,
+			color: rgb(60, 40, 90),
+		},
+		{
+			name:  "KEYS Errors #2",
+			start: 0x144,
+			end:   0x144,
+			color: rgb(60, 40, 90),
+		},
+		{
+			name:  "KEYS #2 CRC",
+			start: 0x145,
+			end:   0x146,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 5",
+			start: 0x147,
+			end:   0x15d,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 5 CRC",
+			start: 0x15e,
+			end:   0x15f,
+			color: colorChecksum,
+		},
+		{
+			name:  "Sync Data",
+			start: 0x160,
+			end:   0x173,
+			color: rgb(200, 220, 130),
+		},
+		{
+			name:  "Sync Data CRC",
+			start: 0x174,
+			end:   0x175,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 6 #1",
+			start: 0x176,
+			end:   0x189,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 6 #1 CRC",
+			start: 0x18a,
+			end:   0x18b,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 6 #2",
+			start: 0x18c,
+			end:   0x19f,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 6 #2 CRC",
+			start: 0x1a0,
+			end:   0x1a1,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 7 #1",
+			start: 0x1a2,
+			end:   0x1a6,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 7 #1 CRC",
+			start: 0x1a7,
+			end:   0x1a8,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 7 #2",
+			start: 0x1a9,
+			end:   0x1ad,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 7 #2 CRC",
+			start: 0x1ae,
+			end:   0x1af,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 8",
+			start: 0x1b0,
+			end:   0x1b5,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 8 CRC",
+			start: 0x1b6,
+			end:   0x1b7,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unknown Data 9",
+			start: 0x1b8,
+			end:   0x1bc,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unknown Data 9 CRC",
+			start: 0x1bd,
+			end:   0x1be,
+			color: colorChecksum,
+		},
+		{
+			name:  "Unnown Data 2 #1",
+			start: 0x1bf,
+			end:   0x1c3,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unnown Data 2 #1 CRC",
+			start: 0x1c4,
+			end:   0x1c5,
+			color: colorChecksum,
+		}, {
+			name:  "Unnown Data 2 #1",
+			start: 0x1c6,
+			end:   0x1ca,
+			color: colorUnknown,
+		},
+		{
+			name:  "Unnown Data 2 #1 CRC",
+			start: 0x1cb,
+			end:   0x1cc,
+			color: colorChecksum,
+		},
+		{
+			name:  "SN Sticker",
+			start: 0x1cd,
+			end:   0x1d1,
+			color: rgb(66, 166, 66),
+		},
+		{
+			name:  "Factory Programming Date",
+			start: 0x1d2,
+			end:   0x1d4,
+			color: rgb(166, 166, 166),
+		},
+		{
+			name:  "Unknown Bytes 2",
+			start: 0x1d5,
+			end:   0x1d7,
+			color: colorUnknown,
+		},
+		{
+			name:  "Delphi PN",
+			start: 0x1d8,
+			end:   0x1db,
+			color: rgb(200, 10, 14),
+		},
+		{
+			name:  "Unknown Bytes 3",
+			start: 0x1dc,
+			end:   0x1dd,
+			color: colorUnknown,
+		},
+		{
+			name:  "Part No",
+			start: 0x1de,
+			end:   0x1e1,
+			color: rgb(123, 31, 220),
+		},
+		{
+			name:  "Unknown Data 14",
+			start: 0x1e2,
+			end:   0x1e4,
+			color: colorUnknown,
+		},
+		{
+			name:  "PSK Low",
+			start: 0x1e5,
+			end:   0x1e8,
+			color: rgb(98, 42, 138),
+		},
+		{
+			name:  "PSK Low",
+			start: 0x1e9,
+			end:   0x1ea,
+			color: rgb(198, 72, 138),
+		},
+		{
+			name:  "PSK Constant",
+			start: 0x1eb,
+			end:   0x1ee,
+			color: rgb(33, 66, 77),
+		},
+		{
+			name:  "PSK Unknown",
+			start: 0x1ef,
+			end:   0x1f0,
+			color: colorUnknown,
+		},
+		{
+			name:  "PSK Checksum",
+			start: 0x1f1,
+			end:   0x1f2,
+			color: colorChecksum,
+		},
+
+		{
+			name:  "SAS Calibration #1",
+			start: 0x1f3,
+			end:   0x1f6,
+			color: rgb(65, 187, 35),
+		},
+		{
+			name:  "SAS Calibration #1 CRC",
+			start: 0x1f7,
+			end:   0x1f8,
+			color: colorChecksum,
+		},
+
+		{
+			name:  "SAS Calibration #2",
+			start: 0x1f3,
+			end:   0x1f6,
+			color: rgb(65, 187, 35),
+		},
+		{
+			name:  "SAS Calibration #2 CRC",
+			start: 0x1f9,
+			end:   0x1fc,
+			color: colorChecksum,
+		},
+		{
+			name:  "EOF",
+			start: 0x1ff,
+			end:   0x1ff,
+			color: rgb(255, 0, 0),
+		},
 		/*
 			{
 				name:  "",
@@ -367,9 +675,10 @@ func viewColor(pos int) color.RGBA {
 }
 
 func generateGrid(data []byte) []widget.TextGridRow {
+	rowWidth := 32
 	var rows []widget.TextGridRow
 	r := bytes.NewReader(data)
-	buff := make([]byte, 32)
+	buff := make([]byte, rowWidth)
 	pos := 0
 	rPos := 0
 	for {
@@ -407,7 +716,7 @@ func generateGrid(data []byte) []widget.TextGridRow {
 					FGColor: viewColor(pos),
 				},
 			})
-			if x < 31 {
+			if x < rowWidth-1 {
 				row.Cells = append(row.Cells, widget.TextGridCell{
 					Style: widget.TextGridStyleWhitespace,
 				})
@@ -415,8 +724,8 @@ func generateGrid(data []byte) []widget.TextGridRow {
 			pos++
 		}
 
-		if n < 32 {
-			for ex := n; ex < 32; ex++ {
+		if n < rowWidth {
+			for ex := n; ex < rowWidth; ex++ {
 				row.Cells = append(row.Cells, widget.TextGridCell{
 					Style: widget.TextGridStyleWhitespace,
 				})
@@ -451,6 +760,9 @@ func generateGrid(data []byte) []widget.TextGridRow {
 			})
 			rPos++
 		}
+		row.Cells = append(row.Cells, widget.TextGridCell{
+			Style: widget.TextGridStyleWhitespace,
+		})
 		rows = append(rows, row)
 	}
 	return rows
