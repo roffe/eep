@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2/dialog"
@@ -89,8 +90,12 @@ func (m *MainWindow) openPort(port string) (serial.Port, error) {
 	if ver, err := getVersion(sr); err != nil {
 		return sr, err
 	} else {
-		if ver != avr.VERSION {
-			m.output("USB adapter is running wrong software version (%s). Please use settings to update your adapter firmware", ver)
+		version, err := strconv.Atoi(ver)
+		if err != nil {
+			m.output("Unknown wire version: %s", ver)
+		}
+		if version < avr.WireVersion {
+			m.output("USB adapter is running old wire version (%s). Please use settings to update your adapter firmware", ver)
 		}
 	}
 
