@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
 	sdialog "github.com/sqweek/dialog"
 )
 
@@ -125,12 +126,26 @@ func (m *MainWindow) viewClickHandler() {
 			return
 		}
 
-		bin, err := os.ReadFile(filename)
+		bin, err := cim.MustLoad(filename)
 		if err != nil {
-			m.output(err.Error())
+			dialog.ShowConfirm("File verification failed", fmt.Sprintf("File verification failed: %v. View anyway?", err), func(ok bool) {
+				if ok {
+					rawbin, err := os.ReadFile(filename)
+					if err != nil {
+						m.output(err.Error())
+						return
+					}
+					newViewerWindow(m.e, filename, rawbin, false)
+				}
+			}, m.w)
 			return
 		}
-		newViewerWindow(m.e, filename, bin, false)
+		b, err := bin.XORBytes()
+		if err != nil {
+			dialog.ShowError(err, m.w)
+			return
+		}
+		newViewerWindow(m.e, filename, b, false)
 	}()
 
 }
@@ -217,14 +232,16 @@ func (m *MainWindow) writeClickHandler() {
 }
 
 func (m *MainWindow) eraseClickHandler() {
-	go func() {
-		if m.e.state.port == "" {
-			m.output("Please select a port first")
-			return
-		}
+	if m.e.state.port == "" {
+		m.output("Please select a port first")
+		return
+	}
 
-		dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(b bool) {
-			if b {
+	dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(b bool) {
+		if b {
+			go func() {
+				m.disableButtons()
+				defer m.enableButtons()
 				start := time.Now()
 				sr, err := m.openPort(m.e.state.port)
 				if sr != nil {
@@ -242,10 +259,10 @@ func (m *MainWindow) eraseClickHandler() {
 				}
 
 				m.output("Erase took %s", time.Since(start).String())
-			}
-		}, m.w)
+			}()
 
-	}()
+		}
+	}, m.w)
 }
 
 func (m *MainWindow) saveFile(title string, data []byte) bool {
