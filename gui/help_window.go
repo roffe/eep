@@ -1,12 +1,15 @@
 package gui
 
 import (
+	"sync"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/hirschmann-koxha-gbr/eep/assets"
+	"github.com/hirschmann-koxha-gbr/eep/update"
 )
 
 type HelpWindow struct {
@@ -15,6 +18,12 @@ type HelpWindow struct {
 
 	tabs *container.AppTabs
 }
+
+var (
+	latestReleases  []*update.Release
+	getReleasesOnce sync.Once
+	changesContent  []fyne.CanvasObject
+)
 
 func NewHelpWindow(e *EEPGui) *HelpWindow {
 	w := e.app.NewWindow("Help")
@@ -62,20 +71,24 @@ func NewHelpWindow(e *EEPGui) *HelpWindow {
 		),
 	)
 
-	changelog := `
-	Mostly firmware optimization  
+	getReleasesOnce.Do(func() {
+		latestReleases = append(latestReleases, update.GetReleases()...)
+		for _, rel := range latestReleases {
+			//header := widget.NewLabelWithStyle(rel.TagName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+			header := widget.NewRichTextFromMarkdown("# " + rel.TagName)
+			text := widget.NewRichTextFromMarkdown(rel.Body)
+			changesContent = append(changesContent, header)
+			changesContent = append(changesContent, text)
+			changesContent = append(changesContent, widget.NewSeparator())
 
-	- Optimized Arduino firmware for better performance
-	- Added version handshake between adapter and software
-	- Added changelog to help section
-	- Added check for new version on startup
-	- Added version number to settings
-	`
+		}
+	})
 
 	changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
-		container.NewVBox(
-			widget.NewLabelWithStyle("v2.0.5", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewRichTextFromMarkdown(changelog),
+		container.NewVScroll(
+			container.NewVBox(
+				changesContent...,
+			),
 		),
 	)
 
