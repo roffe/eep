@@ -115,6 +115,7 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 	var containers []fyne.CanvasObject
 	if vw.cimBin != nil {
 		infoItems := []string{
+			fmt.Sprintf(" Size: %d", len(vw.data)),
 			fmt.Sprintf(" MD5: %s", vw.cimBin.MD5()),
 			fmt.Sprintf(" CRC32: %s", vw.cimBin.CRC32()),
 			fmt.Sprintf(" VIN: %s", vw.cimBin.Vin.Data),
@@ -155,7 +156,7 @@ var (
 			name:  "Programming date",
 			start: 0x0,
 			end:   0x3,
-			color: rgb(128, 128, 0),
+			color: rgb(8, 204, 168),
 		},
 
 		{
@@ -186,7 +187,7 @@ var (
 			name:  "Configuration Version",
 			start: 0x11,
 			end:   0x14,
-			color: rgb(255, 0, 255),
+			color: rgb(51, 0, 33),
 		},
 		{
 			name:  "PNBase",
@@ -343,7 +344,7 @@ var (
 			name:  "KEYS Data #1",
 			start: 0x103,
 			end:   0x116,
-			color: rgb(170, 120, 100),
+			color: rgb(192, 136, 100),
 		},
 		{
 			name:  "KEYS Count #1",
@@ -386,7 +387,7 @@ var (
 			name:  "KEYS Data #2",
 			start: 0x128,
 			end:   0x13b,
-			color: rgb(170, 120, 100),
+			color: rgb(192, 136, 100),
 		},
 		{
 			name:  "KEYS Count #2",
@@ -541,7 +542,7 @@ var (
 			name:  "Factory Programming Date",
 			start: 0x1d2,
 			end:   0x1d4,
-			color: rgb(166, 166, 166),
+			color: rgb(184, 216, 16),
 		},
 		{
 			name:  "Unknown Bytes 2",
@@ -608,7 +609,7 @@ var (
 			name:  "SAS Calibration #1",
 			start: 0x1f3,
 			end:   0x1f6,
-			color: rgb(65, 187, 35),
+			color: rgb(65, 117, 35),
 		},
 		{
 			name:  "SAS Calibration #1 CRC",
@@ -619,14 +620,14 @@ var (
 
 		{
 			name:  "SAS Calibration #2",
-			start: 0x1f3,
-			end:   0x1f6,
-			color: rgb(65, 187, 35),
+			start: 0x1f9,
+			end:   0x1fc,
+			color: rgb(65, 117, 35),
 		},
 		{
 			name:  "SAS Calibration #2 CRC",
-			start: 0x1f9,
-			end:   0x1fc,
+			start: 0x1fd,
+			end:   0x1fe,
 			color: colorChecksum,
 		},
 		{
