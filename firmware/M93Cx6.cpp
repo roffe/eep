@@ -4,7 +4,7 @@ M93Cx6::M93Cx6(uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8
 {
     M93Cx6(0xFF, csPin, skPin, diPin, doPin, orgPin, pinDelay);
 }
-M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF, uint16_t pinDelay = 0x64)
+M93Cx6::M93Cx6(uint8_t pwrPin, uint8_t csPin, uint8_t skPin, uint8_t diPin, uint8_t doPin, uint8_t orgPin = 0xFF, uint8_t pinDelay = 0x64)
 {
     _pwrPin = pwrPin;
     _csPin = csPin;
@@ -74,7 +74,7 @@ void M93Cx6::setOrg(uint8_t org)
     }
 }
 
-void M93Cx6::setPinDelay(uint16_t delay)
+void M93Cx6::setPinDelay(uint8_t delay)
 {
     _pinDelay = delay;
 }
