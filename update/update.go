@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type Latest struct {
+type Release struct {
 	URL             string    `json:"url"`
 	AssetsURL       string    `json:"assets_url"`
 	UploadURL       string    `json:"upload_url"`
@@ -83,24 +83,37 @@ type Assets struct {
 	BrowserDownloadURL string      `json:"browser_download_url"`
 }
 
-func GetLatest() (*Latest, error) {
-	latest := new(Latest)
+func GetLatest() (*Release, error) {
+	latest := new(Release)
+	b, err := httpGetBody("https://api.github.com/repos/Hirschmann-Koxha-GbR/eep/releases/latest")
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
 
-	resp, err := http.Get("https://api.github.com/repos/Hirschmann-Koxha-GbR/eep/releases/latest")
+func GetReleases() []*Release {
+	var releases []*Release
+	b, err := httpGetBody("https://api.github.com/repos/Hirschmann-Koxha-GbR/eep/releases")
+	if err != nil {
+		return nil
+	}
+	if err := json.Unmarshal(b, &releases); err != nil {
+		return nil
+	}
+	return releases
+}
+
+func httpGetBody(url string) ([]byte, error) {
+	resp, err := http.Get(url)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
 		return nil, err
 	}
-
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(b, &latest); err != nil {
-		return nil, err
-	}
-	return latest, nil
+	return io.ReadAll(resp.Body)
 }
