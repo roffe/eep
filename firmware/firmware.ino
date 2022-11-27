@@ -8,18 +8,22 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define WIRE_VERSION "100\n"
+#define WIRE_VERSION "v2.0.7\n"
 
-M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 200);
+M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 150);
 
 static uint8_t cfgChip = 66;
 static uint16_t cfgSize = 512;
 static uint8_t cfgOrg = 8;
-static uint16_t cfgDelay = 200;
+static uint8_t cfgDelay = 150;
+
+const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
+static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
+static uint8_t bufferLength;       // number of characters currently in the buffer
 
 void setup()
 {
-    Serial.begin(57600);
+    Serial.begin(1000000);
     pinMode(LED_BUILTIN, OUTPUT); // LED
     while (!Serial)
     {
@@ -29,13 +33,9 @@ void setup()
     Serial.write(WIRE_VERSION);
 }
 
-static uint8_t bufferLength;       // number of characters currently in the buffer
-const uint8_t BUFF_SIZE = 16;      // make it big enough to hold your longest command
-static char buffer[BUFF_SIZE + 1]; // +1 allows space for the null terminator
-
 void loop()
 {
-    if (Serial.available() > 0)
+    if (Serial.available())
     {
         char c = Serial.read();
         if ((c == '\r' && bufferLength == 0))
@@ -49,7 +49,7 @@ void loop()
             // end-of-line received
             if (bufferLength > 0)
             {
-                handleCmd(buffer);
+                handleCmd();
             }
             bufferLength = 0;
             return;
@@ -76,15 +76,15 @@ void loop()
     }
 }
 
-void handleCmd(char *msg)
+void handleCmd()
 {
-    switch (msg[0])
+    switch (buffer[0])
     {
     case 'h':
         help();
         return;
     case 's':
-        parse(msg);
+        parseBuffer();
         Serial.write("\n");
         return;
     case 'w':
@@ -104,11 +104,11 @@ void handleCmd(char *msg)
 
     if (bufferLength > 8) // parse long command with set options inline
     {
-        parse(msg);
+        parseBuffer();
     }
 
     ep.powerUp();
-    switch (msg[0])
+    switch (buffer[0])
     {
     case 'r':
         read();
@@ -126,12 +126,11 @@ void handleCmd(char *msg)
     ep.powerDown();
 }
 
-static char *cmd;
-
-void parse(char *msg)
+void parseBuffer()
 {
+    char *cmd;
     char *pos;
-    cmd = strtok(msg, ",");
+    cmd = strtok(buffer, ",");
 
     pos = strtok(NULL, ",");
     cfgChip = atoi(pos);
@@ -240,67 +239,60 @@ void settings()
     Serial.println(cfgDelay);
 }
 
-const uint8_t readBufferSize = 16;
-static uint8_t readBufferLength = 0;
-static char readBuffer[readBufferSize + 1];
 void read()
 {
-    readBufferLength = 0;
+    bufferLength = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        readBuffer[readBufferLength++] = ep.read(i);
-        readBuffer[readBufferLength] = 0x00;
-        if (readBufferLength == readBufferSize)
+        buffer[bufferLength++] = ep.read(i);
+        buffer[bufferLength] = 0x00;
+        if (bufferLength == BUFF_SIZE)
         {
             ledOn();
-            for (uint8_t j = 0; j < readBufferLength; j++)
+            for (uint8_t j = 0; j < bufferLength; j++)
             {
-                Serial.write(readBuffer[j]);
+                Serial.write(buffer[j]);
             }
-            readBufferLength = 0;
+            bufferLength = 0;
             ledOff();
         }
     }
 }
 
-static unsigned long lastData;
 void write()
 {
-    lastData = millis();
+    long lastData = millis();
     ep.writeEnable();
     Serial.write('\f');
-    readBufferLength = 0;
-    bool run = true;
+    bufferLength = 0;
     uint16_t writePos = 0;
-    while (run)
+    for (;;)
     {
-        if ((millis() - lastData) > 1000)
+        if ((millis() - lastData) > 500)
         {
-            ep.writeDisable();
             Serial.println("\adata read timeout");
-            return;
+            break;
         }
+        ledOn();
         while (Serial.available() > 0)
         {
-            readBuffer[readBufferLength++] = Serial.read();
-            readBuffer[readBufferLength] = 0x00;
-
-            if (readBufferLength == readBufferSize)
+            buffer[bufferLength++] = Serial.read();
+            buffer[bufferLength] = 0x00;
+            lastData = millis();
+            if (bufferLength == BUFF_SIZE)
             {
-                ledOn();
-                for (uint8_t j = 0; j < readBufferLength; j++)
+                for (uint8_t j = 0; j < bufferLength; j++)
                 {
-                    ep.write(writePos++, readBuffer[j]);
+                    ep.write(writePos++, buffer[j]);
                 }
                 Serial.print("\f");
-                readBufferLength = 0;
-                ledOff();
+                bufferLength = 0;
             }
-            lastData = millis();
         }
-        if (writePos == 512)
+        ledOff();
+        if (writePos >= cfgSize)
         {
-            run = false;
+            break;
         }
     }
     ep.writeDisable();
