@@ -93,7 +93,7 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 
 func (sw *SettingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
-		widget.NewLabelWithStyle("Version: "+VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("CIM Tool Version: "+VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		sw.ignoreError,
 		sw.readSliderLabel,
 		sw.readSlider,
