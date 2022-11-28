@@ -101,7 +101,7 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 	})
 
 	sw.w.SetContent(sw.layout())
-	w.Resize(fyne.NewSize(400, 185))
+	w.Resize(fyne.NewSize(400, 220))
 	w.Show()
 	return sw
 }
@@ -118,6 +118,10 @@ func (sw *SettingsWindow) layout() fyne.CanvasObject {
 		sw.writeSlider,
 		layout.NewSpacer(),
 		sw.updateButton,
+		layout.NewSpacer(),
+		widget.NewButton("Save settings", func() {
+			sw.w.Close()
+		}),
 	)
 }
 
