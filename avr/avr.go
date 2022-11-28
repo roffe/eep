@@ -16,7 +16,19 @@ var avrdudeConf []byte
 //go:embed avrdude.exe
 var avrdudeExe []byte
 
-func Update(port string, cb func(format string, values ...interface{}) int) ([]byte, error) {
+func Update(port, board string, cb func(format string, values ...interface{}) int) ([]byte, error) {
+	var portSpeed string
+	switch board {
+	case "Nano":
+		portSpeed = "115200"
+	case "Nano (old bootloader)":
+		portSpeed = "57600"
+	case "Uno":
+		fallthrough
+	default:
+		portSpeed = "115200"
+	}
+
 	if err := os.WriteFile("avrdude.conf", avrdudeConf, 0644); err != nil {
 		return nil, err
 	}
@@ -38,7 +50,7 @@ func Update(port string, cb func(format string, values ...interface{}) int) ([]b
 		"-P",
 		port,
 		"-b",
-		"115200",
+		portSpeed,
 		"-p",
 		"atmega328p",
 		"-D",

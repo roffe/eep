@@ -16,6 +16,7 @@ import (
 type SettingsWindow struct {
 	e                *EEPGui
 	w                fyne.Window
+	hwVerSelect      *widget.Select
 	ignoreError      *widget.Check
 	readSliderLabel  *widget.Label
 	readSlider       *widget.Slider
@@ -31,8 +32,12 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		e.sw = nil
 	})
 	sw := &SettingsWindow{
-		e:                e,
-		w:                w,
+		e: e,
+		w: w,
+		hwVerSelect: widget.NewSelect([]string{"Uno", "Nano", "Nano (old bootloader)"}, func(s string) {
+			e.state.hwVersion.Set(s)
+			e.app.Preferences().SetString("hardware_version", s)
+		}),
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.state.ignoreError),
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(0, 255, e.state.readDelayValue),
@@ -46,6 +51,11 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 
 	if f, err := sw.e.state.writeDelayValue.Get(); err == nil {
 		sw.writeSliderLabel.SetText(delayLabel("Write", f))
+	}
+
+	sw.hwVerSelect.PlaceHolder = "Select Arduino version"
+	if hwVer, err := e.state.hwVersion.Get(); err == nil {
+		sw.hwVerSelect.SetSelected(hwVer)
 	}
 
 	sw.ignoreError.OnChanged = func(b bool) {
@@ -71,7 +81,12 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		sw.e.mw.disableButtons()
 		defer sw.e.mw.enableButtons()
 
-		out, err := avr.Update(sw.e.state.port, sw.e.mw.output)
+		hwVer, err := sw.e.state.hwVersion.Get()
+		if err != nil {
+			hwVer = "Uno"
+		}
+
+		out, err := avr.Update(sw.e.state.port, hwVer, sw.e.mw.output)
 		if err != nil {
 			sw.e.mw.output("Error updating: %v", err)
 			return
@@ -92,8 +107,10 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 }
 
 func (sw *SettingsWindow) layout() fyne.CanvasObject {
+
 	return container.NewVBox(
 		widget.NewLabelWithStyle("CIM Tool Version: "+VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		container.NewHBox(widget.NewLabel("Arduino"), sw.hwVerSelect),
 		sw.ignoreError,
 		sw.readSliderLabel,
 		sw.readSlider,

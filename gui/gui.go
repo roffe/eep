@@ -10,7 +10,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VERSION = "v2.0.7"
+const VERSION = "v2.0.8"
 
 type EEPGui struct {
 	app   fyne.App
@@ -23,6 +23,7 @@ type EEPGui struct {
 type AppState struct {
 	port            string
 	portList        []string
+	hwVersion       binding.String
 	readDelayValue  binding.Float
 	writeDelayValue binding.Float
 	ignoreError     binding.Bool
@@ -31,22 +32,30 @@ type AppState struct {
 func Run(a fyne.App) {
 	state := &AppState{
 		port:            a.Preferences().String("port"),
+		hwVersion:       binding.NewString(),
 		readDelayValue:  binding.NewFloat(),
 		writeDelayValue: binding.NewFloat(),
 		ignoreError:     binding.NewBool(),
 	}
 
-	r := a.Preferences().FloatWithFallback("read_pin_delay", 75)
+	prefs := a.Preferences()
+
+	hw := prefs.StringWithFallback("hardware_version", "Uno")
+	if err := state.hwVersion.Set(hw); err != nil {
+		panic(err)
+	}
+
+	r := prefs.FloatWithFallback("read_pin_delay", 75)
 	if err := state.readDelayValue.Set(r); err != nil {
 		panic(err)
 	}
 
-	w := a.Preferences().FloatWithFallback("write_pin_delay", 150)
+	w := prefs.FloatWithFallback("write_pin_delay", 150)
 	if err := state.writeDelayValue.Set(w); err != nil {
 		panic(err)
 	}
 
-	ignoreError := a.Preferences().BoolWithFallback("ignore_read_errors", false)
+	ignoreError := prefs.BoolWithFallback("ignore_read_errors", false)
 	if err := state.ignoreError.Set(ignoreError); err != nil {
 		panic(err)
 	}
