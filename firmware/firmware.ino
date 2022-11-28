@@ -8,7 +8,7 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define WIRE_VERSION "v2.0.7\n"
+#define WIRE_VERSION "v2.0.8\n"
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 150);
 
@@ -29,7 +29,7 @@ void setup()
     {
         // wait for serial port to connect. Needed for native USB
     };
-    delayMicroseconds(199);
+
     Serial.write(WIRE_VERSION);
 }
 
@@ -41,6 +41,7 @@ void loop()
         if ((c == '\r' && bufferLength == 0))
         {
             help();
+            bufferLength = 0;
             return;
         }
 
@@ -80,6 +81,9 @@ void handleCmd()
 {
     switch (buffer[0])
     {
+    case 'v':
+        Serial.print(WIRE_VERSION);
+        return;
     case 'h':
         help();
         return;
@@ -224,6 +228,7 @@ void help()
     Serial.println("e - Erase eeprom");
     Serial.println("p - Hex print eeprom content");
     Serial.println("h - This help");
+    Serial.println("v - Print version");
 }
 
 void settings()
@@ -310,23 +315,13 @@ void erase()
 void printBin()
 {
     uint8_t linePos = 0;
-    char buf[4];
+    char buf[3];
     ledOn();
     Serial.println("--- Hex dump ---");
-    char c;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        switch (cfgOrg)
-        {
-        case 8:
-            c = ep.read(i);
-            sprintf(buf, "%02X ", c);
-            break;
-        case 16:
-            c = ep.read(i);
-            sprintf(buf, "%02X%02X ", c >> 8, c & 0xFF);
-            break;
-        }
+        uint8_t c = ep.read(i);
+        sprintf(buf, "%02X ", c);
         Serial.print(buf);
         linePos++;
         if (linePos == 24)
