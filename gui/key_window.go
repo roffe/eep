@@ -14,71 +14,73 @@ import (
 )
 
 func newKeyView(e *EEPGui, vw *viewerWindow, index int, fw *cim.Bin) fyne.CanvasObject {
-	return container.NewVBox(
-		kv(vw.w, "Type", "%s", fw.Keys.Data1[index].Type()),
-		newEditEntry(vw.e.mw.w, "P0 IDE",
-			fmt.Sprintf("%X", fw.Keys.Data1[index].Value),
-			func(s string) {
-				if len(s) == 8 {
-					b, err := hex.DecodeString(s)
-					if err != nil {
-						dialog.ShowError(err, vw.w)
-						return
-					}
-					if err := fw.SetKeyID(uint8(index), b); err != nil {
+	ideEntry := &widget.Entry{
+		Text:     fmt.Sprintf("%X", fw.Keys.Data1[index].Value),
+		Wrapping: fyne.TextWrapOff,
+	}
+	ideEntry.OnChanged = func(s string) {
+		if len(s) > 8 {
+			ideEntry.SetText(s[:8])
+		}
+		if len(s) == 8 {
+			b, err := hex.DecodeString(s)
+			if err != nil {
+				dialog.ShowError(err, vw.w)
+				return
+			}
+			if err := fw.SetKeyID(uint8(index), b); err != nil {
+				dialog.ShowError(err, vw.w)
+			}
+		}
+	}
+
+	syncEntry := &widget.Entry{
+		Text:     fmt.Sprintf("%X", fw.Sync.Data[index]),
+		Wrapping: fyne.TextWrapOff,
+	}
+	syncEntry.OnChanged = func(s string) {
+		if len(s) > 8 {
+			syncEntry.SetText(s[:8])
+		}
+		if len(s) == 8 {
+			b, err := hex.DecodeString(s)
+			if err == nil {
+				if len(b) == 4 {
+					if err := fw.SetSyncData(uint8(index), b); err != nil {
 						dialog.ShowError(err, vw.w)
 					}
 				}
-			}),
-		kv(vw.e.mw.w, "P1 ISK Hi", "%X", fw.Keys.IskHI1), // P1 ISK Hi, first 4 bytes
-		/*
-			fmt.Sprintf("%X", fw.Keys.IskHI1),
-				func(s string) {
-					if len(s) == 8 {
-						if err := fw.Keys.SetISKHigh(s); err != nil {
-							dialog.ShowError(err, vw.w)
-						}
-					}
-				}),
-		*/
-		kv(vw.e.mw.w, "P2 ISK Lo", "%X", fw.Keys.IskLO1), // P2 ISK Lo, 2 bytes reserved and two are remaining ISK bytes
-		/*
-			fmt.Sprintf("%X", fw.Keys.IskLO1),
-				func(s string) {
-					if len(s) == 8 {
-						if err := fw.Keys.SetISKLow(s); err != nil {
-							dialog.ShowError(err, vw.w)
-						}
-					}
-				}),
-		*/
-		// widget.NewLabel("P3 is like control bytes (keyfob settings)"),
-		// widget.NewLabel("P4 is unknown yet"),
-		// widget.NewLabel("P5 is 00WWYYYY - probably production date"),
-		// widget.NewLabel("P6 is revision - i have always seen only 00004141 (AA)"),
-		// widget.NewLabel("P7 is part number, you can google it"),
+			}
+		}
+	}
 
-		//widget.NewLabel("P4 PSK: "fw.PSK.Low)),
+	return container.NewVBox(
+		kv(vw.w, "Type", "%s", fw.Keys.Data1[index].Type()),
+
+		container.NewHBox(
+			newBoldEntry("P0 IDE"),
+			container.NewBorder(nil, nil, nil, nil, ideEntry),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				e.mw.w.Clipboard().SetContent(ideEntry.Text)
+			}),
+		),
+		kv(vw.e.mw.w, "P1 ISK Hi", "%X", fw.Keys.IskHI1), // P1 ISK Hi, first 4 bytes
+		kv(vw.e.mw.w, "P2 ISK Lo", "%X", fw.Keys.IskLO1), // P2 ISK Lo, 2 bytes reserved and two are remaining ISK bytes
 
 		kv(vw.w, "P4 PSK Hi", "%X%X", fw.PSK.High, fw.PSK.Constant[:2]), //PSK first 4 bytes (like on cim dump analyzer)
 		kv(vw.w, "P5 PSK Lo", "%X%X", fw.PSK.High, fw.PSK.Low[:2]),      // P5 is next two bytes of PSK but prefixed with its first two bytes
 
 		kv(vw.w, "P6 PCF", "%s", "6732F2C5"),
 
-		newEditEntry(vw.w, "P7 Sync", fmt.Sprintf("%X", fw.Sync.Data[index]), // sync from eeprom
-			func(s string) {
-				if len(s) == 8 {
-					b, err := hex.DecodeString(s)
-					if err == nil {
-						if len(b) == 16 {
-							if err := fw.SetSyncData(uint8(index), b); err != nil {
-								dialog.ShowError(err, vw.w)
-							}
-						}
-					}
-				}
+		container.NewHBox(
+			newBoldEntry("P7 Sync"),
+			container.NewBorder(nil, nil, nil, nil, syncEntry),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				e.mw.w.Clipboard().SetContent(syncEntry.Text)
 			}),
-
+		),
 		layout.NewSpacer(),
 		widget.NewButton("Close", func() {
 			vw.w.SetContent(vw.layout())
