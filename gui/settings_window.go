@@ -53,6 +53,7 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		sw.writeSliderLabel.SetText(delayLabel("Write", f))
 	}
 
+	sw.hwVerSelect.Alignment = fyne.TextAlignCenter
 	sw.hwVerSelect.PlaceHolder = "Select Arduino version"
 	if hwVer, err := e.state.hwVersion.Get(); err == nil {
 		sw.hwVerSelect.SetSelected(hwVer)
@@ -111,6 +112,7 @@ func (sw *SettingsWindow) layout() fyne.CanvasObject {
 	return container.NewVBox(
 		widget.NewLabelWithStyle("CIM Tool Version: "+VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewHBox(widget.NewLabel("Arduino"), sw.hwVerSelect),
+
 		sw.ignoreError,
 		sw.readSliderLabel,
 		sw.readSlider,

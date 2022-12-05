@@ -96,6 +96,9 @@ func (m *MainWindow) openPort(port string) (serial.Port, error) {
 			sr.Close()
 			return err
 		} else {
+			if semver.Compare(VERSION, ver) < 0 {
+				m.output("USB adapter is running newer wire version (%s). Please update CIM Tool", ver)
+			}
 			if semver.Compare(VERSION, ver) > 0 {
 				m.output("USB adapter is running old wire version (%s). Please use settings to update your adapter firmware", ver)
 			}

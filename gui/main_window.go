@@ -37,7 +37,7 @@ type MainWindow struct {
 }
 
 func NewMainWindow(e *EEPGui) *MainWindow {
-	w := e.app.NewWindow("Saab CIM Tool by Hirschmann-Koxha GbR")
+	w := e.app.NewWindow("Saab CIM Tool by Hirschmann-Koxha GbR " + VERSION)
 	w.SetMaster()
 	m := &MainWindow{e: e, w: w}
 	w.SetContent(m.layout())

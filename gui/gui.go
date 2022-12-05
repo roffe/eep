@@ -2,6 +2,7 @@ package gui
 
 import (
 	"net/url"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
@@ -10,7 +11,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VERSION = "v2.0.8"
+const VERSION = "v2.0.9"
 
 type EEPGui struct {
 	app   fyne.App
@@ -68,6 +69,7 @@ func Run(a fyne.App) {
 	eep.mw = NewMainWindow(eep)
 
 	go func() {
+		time.Sleep(2 * time.Second)
 		latest, err := update.GetLatest()
 		if err == nil {
 			if semver.Compare(latest.TagName, VERSION) > 0 {

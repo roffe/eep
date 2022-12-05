@@ -3,9 +3,9 @@ package gui
 import (
 	"bytes"
 	"fmt"
-	"image/color"
 	"io"
-	"strings"
+	"log"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -20,11 +20,28 @@ type viewerWindow struct {
 	e       *EEPGui
 	w       fyne.Window
 	toolbar *widget.Toolbar
-	grid    *widget.TextGrid
-	data    []byte
-	cimBin  *cim.Bin
-	saved   bool
-	xor     bool
+	tabs    *container.AppTabs
+
+	data []byte
+
+	cimBin *cim.Bin
+	saved  bool
+}
+
+var viewWindowSize = fyne.NewSize(550, 300)
+
+func (vw *viewerWindow) Save() {
+	if vw.cimBin != nil {
+		b, err := vw.cimBin.XORBytes()
+		if err != nil {
+			dialog.ShowError(err, vw.w)
+			return
+		}
+		vw.e.mw.saveFile("Save bin file", b)
+	} else {
+		vw.e.mw.saveFile("Save bin file", vw.data)
+	}
+
 }
 
 func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose bool) *viewerWindow {
@@ -33,18 +50,26 @@ func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose boo
 		e:    e,
 		w:    w,
 		data: data,
-		grid: widget.NewTextGrid(),
-		xor:  true,
 	}
+
 	vw.toolbar = vw.newToolbar()
+
+	bin, err := cim.MustLoadBytes(filename, data)
+	if err == nil {
+		vw.cimBin = bin
+	} else {
+		w.SetContent(newHexView(vw))
+		w.Show()
+		return vw
+	}
 
 	w.SetCloseIntercept(func() {
 		if askSaveOnClose && !vw.saved {
 			dialog.ShowConfirm("Unsaved file", "Save file before closing?", func(b bool) {
 				if b {
-					e.mw.saveFile("Save bin file", vw.data)
+					vw.Save()
 				}
-				w.Close()
+				vw.w.Close()
 			}, vw.w)
 		} else {
 			w.Close()
@@ -52,17 +77,136 @@ func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose boo
 		}
 	})
 
-	for i, row := range generateGrid(vw.data) {
-		vw.grid.SetRow(i, row)
-	}
-	bin, err := cim.MustLoadBytes(filename, data)
-	if err == nil {
-		vw.cimBin = bin
+	var containers []*container.TabItem
+
+	if vw.cimBin != nil {
+		sasSelect := widget.NewSelect([]string{"Yes", "No"}, func(s string) {
+			switch s {
+			case "Yes":
+				vw.cimBin.SetSasOpt(true)
+			case "No":
+				fallthrough
+			default:
+				vw.cimBin.SetSasOpt(false)
+			}
+		})
+
+		sasSelect.SetSelected(func() string {
+			if vw.cimBin.GetSasOpt() {
+				return "Yes"
+			}
+			return "No"
+		}())
+
+		infoTab := container.NewTabItemWithIcon("Info", theme.SettingsIcon(), container.NewVBox(
+			kv(vw.w, "MD5", "%s", vw.cimBin.MD5()),
+			kv(vw.w, "CRC32", "%s", vw.cimBin.CRC32()),
+			kv(vw.w, "Size", "%d", len(data)),
+			kv(vw.w, "VIN", "%s", vw.cimBin.Vin.Data),
+			kv(vw.w, "MY", "%s", vw.cimBin.ModelYear()),
+			container.NewHBox(widget.NewLabelWithStyle("SAS", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), sasSelect),
+			newEditEntry(vw.w, "ISK", fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
+				func(s string) {
+					if len(s) == 12 {
+						if err == nil {
+							if err := vw.cimBin.Keys.SetISKHigh(s[:8]); err != nil {
+								dialog.ShowError(err, vw.w)
+								return
+							}
+							if err := vw.cimBin.Keys.SetISKLow(s[8:12]); err != nil {
+								dialog.ShowError(err, vw.w)
+								return
+							}
+						}
+					}
+				}),
+			kv(vw.w, "PSK", "%X%X", vw.cimBin.PSK.Low, vw.cimBin.PSK.High),
+		))
+
+		versionTab := container.NewTabItemWithIcon("Versions", theme.QuestionIcon(), container.NewVBox(
+			kv(vw.w, "End model (HW+SW)", "%d%s", vw.cimBin.PartNo1, vw.cimBin.PartNo1Rev),
+			kv(vw.w, "Base model (HW+boot)", "%d%s", vw.cimBin.PnBase1, vw.cimBin.PnBase1Rev),
+			kv(vw.w, "Delphi part number", "%d", vw.cimBin.DelphiPN),
+			kv(vw.w, "SAAB part number", "%d", vw.cimBin.PartNo),
+			kv(vw.w, "Configuration Version", "%d", vw.cimBin.ConfigurationVersion),
+		))
+
+		keyList := new(widget.List)
+		keyList.Length = func() int {
+			return int(vw.cimBin.Keys.Count1)
+		}
+		keyList.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+			log.Println(id)
+		}
+		keyList.CreateItem = func() fyne.CanvasObject {
+			return container.NewHBox(
+				widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+				layout.NewSpacer(),
+				widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+				widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{}),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("Show", theme.HelpIcon(), func() {}),
+				widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {}),
+			)
+		}
+
+		keyList.UpdateItem = func(item widget.ListItemID, obj fyne.CanvasObject) {
+			obj.(*fyne.Container).Objects[0].(*widget.Label).SetText(fmt.Sprintf("Key #%d", item))
+			obj.(*fyne.Container).Objects[2].(*widget.Label).SetText(vw.cimBin.Keys.Data1[item].Type())
+			obj.(*fyne.Container).Objects[3].(*widget.Label).SetText(fmt.Sprintf("%02X", vw.cimBin.Keys.Data1[item].Value))
+			obj.(*fyne.Container).Objects[5].(*widget.Button).OnTapped = func() {
+				vw.w.SetContent(newKeyView(vw.e, vw, item, vw.cimBin))
+			}
+			obj.(*fyne.Container).Objects[6].(*widget.Button).OnTapped = func() {
+				vw.cimBin.Keys.Count1--
+				vw.cimBin.Keys.Count2--
+				vw.cimBin.DeleteKey(item)
+				data, err = vw.cimBin.XORBytes()
+				if err != nil {
+					dialog.ShowError(err, vw.w)
+				}
+				keyList.Refresh()
+			}
+		}
+
+		keysTab := container.NewTabItemWithIcon("Keys", theme.LoginIcon(), container.NewBorder(
+			nil,
+			widget.NewButton("Add key", newAddKey(vw)),
+			nil,
+			nil,
+			keyList,
+		))
+
+		vinSetting := widget.NewEntry()
+		vinSetting.SetText(vw.cimBin.Vin.Data)
+		vinSetting.Refresh()
+		vinSetting.OnSubmitted = func(s string) {
+			if err := vw.cimBin.Vin.Set(s); err != nil {
+				dialog.ShowError(err, vw.w)
+			}
+		}
+		vinSetting.Wrapping = fyne.TextWrapOff
+
+		containers = append(containers, infoTab, versionTab, keysTab)
 	}
 
+	vw.tabs = container.NewAppTabs(containers...)
+
 	w.SetContent(vw.layout())
+	w.Resize(viewWindowSize)
 	w.Show()
 	return vw
+}
+
+func kv(w fyne.Window, k, valueFormat string, values ...interface{}) *fyne.Container {
+	return container.NewHBox(
+		widget.NewLabelWithStyle(k+":", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(fmt.Sprintf(valueFormat, values...), fyne.TextAlignLeading, fyne.TextStyle{}),
+		layout.NewSpacer(),
+		widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+			w.Clipboard().SetContent(fmt.Sprintf(valueFormat, values...))
+		}),
+	)
 }
 
 func (vw *viewerWindow) newToolbar() *widget.Toolbar {
@@ -71,24 +215,28 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 			vw.e.mw.saveFile("Save bin file", vw.data)
 			vw.saved = true
 		}),
-		widget.NewToolbarSeparator(),
-		widget.NewToolbarAction(theme.ContentClearIcon(), func() {
-			tmpData := make([]byte, len(vw.data))
-			if vw.xor {
-				copy(tmpData, vw.data)
-				vw.xor = false
-			} else {
-				copy(tmpData, vw.data)
-				for i := range tmpData {
-					tmpData[i] ^= 0xff
-				}
-				vw.xor = true
+		widget.NewToolbarAction(theme.UploadIcon(), func() {
+			bin, err := vw.cimBin.XORBytes()
+			if err != nil {
+				dialog.ShowError(err, vw.w)
+				return
 			}
-			for i, r := range generateGrid(tmpData) {
-				for j, c := range r.Cells {
-					vw.grid.SetCell(i, j, c)
+			dialog.ShowConfirm("Write to cim?", "Continue writing to CIM?", func(ok bool) {
+				if ok {
+					vw.e.mw.output("Flashing CIM ... ")
+					start := time.Now()
+					go func() {
+						vw.e.mw.disableButtons()
+						defer vw.e.mw.enableButtons()
+						if ok := vw.e.mw.writeCIM(vw.e.state.port, bin); !ok {
+							return
+						}
+						vw.e.mw.output("Flashed %s, took %s", "CIM", time.Since(start).String())
+					}()
+
 				}
-			}
+			}, vw.w)
+
 		}),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
 			fw, err := cim.MustLoadBytes("input file", vw.data)
@@ -108,565 +256,22 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 				dialog.ShowInformation("File file saved", "The virginized bin file has been saved.", vw.w)
 			}
 		}),
+		widget.NewToolbarAction(theme.SearchIcon(), func() {
+			b, err := vw.cimBin.Bytes()
+			if err != nil {
+				dialog.ShowError(err, vw.w)
+				return
+			}
+			vw.data = b
+			vw.w.SetContent(newHexView(vw))
+		}),
 	)
 }
 
 func (vw *viewerWindow) layout() fyne.CanvasObject {
-	var containers []fyne.CanvasObject
-	if vw.cimBin != nil {
-		infoItems := []string{
-			fmt.Sprintf(" Size: %d", len(vw.data)),
-			fmt.Sprintf(" MD5: %s", vw.cimBin.MD5()),
-			fmt.Sprintf(" CRC32: %s", vw.cimBin.CRC32()),
-			fmt.Sprintf(" VIN: %s", vw.cimBin.Vin.Data),
-			fmt.Sprintf(" MY: %s", vw.cimBin.ModelYear()),
-			fmt.Sprintf(" SAS: %t", vw.cimBin.SasOpt()),
-			fmt.Sprintf(" End model (HW+SW): %d%s", vw.cimBin.PartNo1, vw.cimBin.PartNo1Rev),
-			fmt.Sprintf(" Base model (HW+boot): %d%s", vw.cimBin.PnBase1, vw.cimBin.PnBase1Rev),
-			fmt.Sprintf(" Delphi part number: %d", vw.cimBin.DelphiPN),
-			fmt.Sprintf(" SAAB part number: %d", vw.cimBin.PartNo),
-			fmt.Sprintf(" Configuration Version: %d", vw.cimBin.ConfigurationVersion),
-		}
-		tg := widget.NewTextGridFromString(strings.Join(infoItems, "\n"))
-		containers = append(containers, tg)
-	}
-
-	containers = append(containers, vw.grid)
-
 	return container.NewBorder(vw.toolbar, nil, nil, nil,
-		container.New(layout.NewHBoxLayout(),
-			containers...,
-		),
+		vw.tabs,
 	)
-}
-
-type colorDesc struct {
-	name  string
-	start int
-	end   int
-	color color.RGBA
-}
-
-var (
-	colorChecksum = rgb(0, 255, 0)
-	colorUnknown  = rgb(33, 33, 33)
-
-	colorList = []colorDesc{
-		{
-			name:  "Programming date",
-			start: 0x0,
-			end:   0x3,
-			color: rgb(8, 204, 168),
-		},
-
-		{
-			name:  "Sas Option",
-			start: 0x4,
-			end:   0x4,
-			color: rgb(50, 200, 0),
-		},
-		{
-			name:  "Unknown Bytes 1",
-			start: 0x5,
-			end:   0xa,
-			color: colorUnknown,
-		},
-		{
-			name:  "PartNo 1",
-			start: 0xb,
-			end:   0xe,
-			color: rgb(160, 18, 34),
-		},
-		{
-			name:  "PartNo 1 Revision",
-			start: 0xf,
-			end:   0x10,
-			color: rgb(60, 60, 10),
-		},
-		{
-			name:  "Configuration Version",
-			start: 0x11,
-			end:   0x14,
-			color: rgb(51, 0, 33),
-		},
-		{
-			name:  "PNBase",
-			start: 0x15,
-			end:   0x18,
-			color: rgb(45, 72, 200),
-		},
-		{
-			name:  "PNBase Revision",
-			start: 0x19,
-			end:   0x1a,
-			color: rgb(100, 100, 43),
-		},
-		{
-			name:  "VIN Data",
-			start: 0x1b,
-			end:   0x2b,
-			color: rgb(200, 30, 76),
-		},
-		{
-			name:  "VIN Value",
-			start: 0x2c,
-			end:   0x2c,
-			color: rgb(240, 240, 10),
-		},
-		{
-			name:  "VIN Unknown",
-			start: 0x2d,
-			end:   0x35,
-			color: rgb(35, 156, 63),
-		},
-		{
-			name:  "VIN SPS Count",
-			start: 0x36,
-			end:   0x36,
-			color: rgb(66, 22, 88),
-		},
-		{
-			name:  "VIN Checksum",
-			start: 0x37,
-			end:   0x38,
-			color: colorChecksum,
-		},
-		{
-			name:  "Programming ID",
-			start: 0x39,
-			end:   0x56,
-			color: rgb(72, 140, 38),
-		},
-		{
-			name:  "Unknown Data 3 #1",
-			start: 0x57,
-			end:   0x80,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 3 #1 CRC",
-			start: 81,
-			end:   0x82,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 3 #2",
-			start: 0x83,
-			end:   0xac,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 3 #2 CRC",
-			start: 0xad,
-			end:   0xae,
-			color: colorChecksum,
-		},
-		{
-			name:  "PIN Data #1",
-			start: 0xaf,
-			end:   0xb2,
-			color: rgb(56, 89, 217),
-		},
-		{
-			name:  "PIN Unknown #1",
-			start: 0xb3,
-			end:   0xb6,
-			color: colorUnknown,
-		},
-		{
-			name:  "PIN CRC #1",
-			start: 0xb7,
-			end:   0xb8,
-			color: colorChecksum,
-		},
-
-		{
-			name:  "PIN Data #2",
-			start: 0xb9,
-			end:   0xbc,
-			color: rgb(56, 89, 217),
-		},
-		{
-			name:  "PIN Unknown #2",
-			start: 0xbd,
-			end:   0xc0,
-			color: colorUnknown,
-		},
-		{
-			name:  "PIN CRC #2",
-			start: 0xc1,
-			end:   0xc2,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 4",
-			start: 0xc3,
-			end:   0xc4,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 4 CRC",
-			start: 0xc5,
-			end:   0xc6,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 1",
-			start: 0xc7,
-			end:   0xf0,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknwon Data 2 CRC",
-			start: 0xf1,
-			end:   0xf2,
-			color: colorChecksum,
-		},
-		{
-			name:  "Const 1 Data",
-			start: 0xf3,
-			end:   0xfa,
-			color: rgb(40, 5, 113),
-		},
-		{
-			name:  "Const 1 CRC",
-			start: 0xfb,
-			end:   0xfc,
-			color: colorChecksum,
-		},
-		{
-			name:  "KEYS ISK High #1",
-			start: 0xfd,
-			end:   0x100,
-			color: rgb(37, 132, 20),
-		},
-		{
-			name:  "KEYS ISK Low #1",
-			start: 0x101,
-			end:   0x102,
-			color: rgb(137, 132, 120),
-		},
-		{
-			name:  "KEYS Data #1",
-			start: 0x103,
-			end:   0x116,
-			color: rgb(192, 136, 100),
-		},
-		{
-			name:  "KEYS Count #1",
-			start: 0x117,
-			end:   0x117,
-			color: rgb(170, 120, 100),
-		},
-		{
-			name:  "KEYS Constant #1",
-			start: 0x118,
-			end:   0x11e,
-			color: rgb(60, 40, 90),
-		},
-		{
-			name:  "KEYS Errors #1",
-			start: 0x11f,
-			end:   0x11f,
-			color: rgb(60, 40, 90),
-		},
-		{
-			name:  "KEYS #1 CRC",
-			start: 0x120,
-			end:   0x121,
-			color: colorChecksum,
-		},
-
-		{
-			name:  "KEYS ISK High #2",
-			start: 0x122,
-			end:   0x125,
-			color: rgb(37, 132, 20),
-		},
-		{
-			name:  "KEYS ISK Low #2",
-			start: 0x126,
-			end:   0x127,
-			color: rgb(137, 132, 120),
-		},
-		{
-			name:  "KEYS Data #2",
-			start: 0x128,
-			end:   0x13b,
-			color: rgb(192, 136, 100),
-		},
-		{
-			name:  "KEYS Count #2",
-			start: 0x13c,
-			end:   0x13c,
-			color: rgb(170, 120, 100),
-		},
-		{
-			name:  "KEYS Constant #2",
-			start: 0x13d,
-			end:   0x143,
-			color: rgb(60, 40, 90),
-		},
-		{
-			name:  "KEYS Errors #2",
-			start: 0x144,
-			end:   0x144,
-			color: rgb(60, 40, 90),
-		},
-		{
-			name:  "KEYS #2 CRC",
-			start: 0x145,
-			end:   0x146,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 5",
-			start: 0x147,
-			end:   0x15d,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 5 CRC",
-			start: 0x15e,
-			end:   0x15f,
-			color: colorChecksum,
-		},
-		{
-			name:  "Sync Data",
-			start: 0x160,
-			end:   0x173,
-			color: rgb(200, 220, 130),
-		},
-		{
-			name:  "Sync Data CRC",
-			start: 0x174,
-			end:   0x175,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 6 #1",
-			start: 0x176,
-			end:   0x189,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 6 #1 CRC",
-			start: 0x18a,
-			end:   0x18b,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 6 #2",
-			start: 0x18c,
-			end:   0x19f,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 6 #2 CRC",
-			start: 0x1a0,
-			end:   0x1a1,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 7 #1",
-			start: 0x1a2,
-			end:   0x1a6,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 7 #1 CRC",
-			start: 0x1a7,
-			end:   0x1a8,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 7 #2",
-			start: 0x1a9,
-			end:   0x1ad,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 7 #2 CRC",
-			start: 0x1ae,
-			end:   0x1af,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 8",
-			start: 0x1b0,
-			end:   0x1b5,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 8 CRC",
-			start: 0x1b6,
-			end:   0x1b7,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unknown Data 9",
-			start: 0x1b8,
-			end:   0x1bc,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unknown Data 9 CRC",
-			start: 0x1bd,
-			end:   0x1be,
-			color: colorChecksum,
-		},
-		{
-			name:  "Unnown Data 2 #1",
-			start: 0x1bf,
-			end:   0x1c3,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unnown Data 2 #1 CRC",
-			start: 0x1c4,
-			end:   0x1c5,
-			color: colorChecksum,
-		}, {
-			name:  "Unnown Data 2 #1",
-			start: 0x1c6,
-			end:   0x1ca,
-			color: colorUnknown,
-		},
-		{
-			name:  "Unnown Data 2 #1 CRC",
-			start: 0x1cb,
-			end:   0x1cc,
-			color: colorChecksum,
-		},
-		{
-			name:  "SN Sticker",
-			start: 0x1cd,
-			end:   0x1d1,
-			color: rgb(66, 166, 66),
-		},
-		{
-			name:  "Factory Programming Date",
-			start: 0x1d2,
-			end:   0x1d4,
-			color: rgb(184, 216, 16),
-		},
-		{
-			name:  "Unknown Bytes 2",
-			start: 0x1d5,
-			end:   0x1d7,
-			color: colorUnknown,
-		},
-		{
-			name:  "Delphi PN",
-			start: 0x1d8,
-			end:   0x1db,
-			color: rgb(200, 10, 14),
-		},
-		{
-			name:  "Unknown Bytes 3",
-			start: 0x1dc,
-			end:   0x1dd,
-			color: colorUnknown,
-		},
-		{
-			name:  "Part No",
-			start: 0x1de,
-			end:   0x1e1,
-			color: rgb(123, 31, 220),
-		},
-		{
-			name:  "Unknown Data 14",
-			start: 0x1e2,
-			end:   0x1e4,
-			color: colorUnknown,
-		},
-		{
-			name:  "PSK Low",
-			start: 0x1e5,
-			end:   0x1e8,
-			color: rgb(98, 42, 138),
-		},
-		{
-			name:  "PSK Low",
-			start: 0x1e9,
-			end:   0x1ea,
-			color: rgb(198, 72, 138),
-		},
-		{
-			name:  "PSK Constant",
-			start: 0x1eb,
-			end:   0x1ee,
-			color: rgb(33, 66, 77),
-		},
-		{
-			name:  "PSK Unknown",
-			start: 0x1ef,
-			end:   0x1f0,
-			color: colorUnknown,
-		},
-		{
-			name:  "PSK Checksum",
-			start: 0x1f1,
-			end:   0x1f2,
-			color: colorChecksum,
-		},
-
-		{
-			name:  "SAS Calibration #1",
-			start: 0x1f3,
-			end:   0x1f6,
-			color: rgb(65, 117, 35),
-		},
-		{
-			name:  "SAS Calibration #1 CRC",
-			start: 0x1f7,
-			end:   0x1f8,
-			color: colorChecksum,
-		},
-
-		{
-			name:  "SAS Calibration #2",
-			start: 0x1f9,
-			end:   0x1fc,
-			color: rgb(65, 117, 35),
-		},
-		{
-			name:  "SAS Calibration #2 CRC",
-			start: 0x1fd,
-			end:   0x1fe,
-			color: colorChecksum,
-		},
-		{
-			name:  "EOF",
-			start: 0x1ff,
-			end:   0x1ff,
-			color: rgb(255, 0, 0),
-		},
-		/*
-			{
-				name:  "",
-				start: 0x,
-				end:   0x,
-				color: rgb(),
-			},
-		*/
-	}
-)
-
-func rgb(r, g, b uint8) color.RGBA {
-	return color.RGBA{R: r, G: g, B: b, A: 1}
-}
-
-func viewColor(pos int) color.RGBA {
-	for _, c := range colorList {
-		if (c.start == c.end) && c.start == pos {
-			return c.color
-		}
-		if pos >= c.start && pos <= c.end {
-			return c.color
-		}
-	}
-	return rgb(255, 255, 255)
 }
 
 func generateGrid(data []byte) []widget.TextGridRow {
@@ -684,33 +289,24 @@ func generateGrid(data []byte) []widget.TextGridRow {
 			}
 		}
 		var row widget.TextGridRow
-
-		row.Cells = append(row.Cells, widget.TextGridCell{
-			Style: widget.TextGridStyleWhitespace,
-		})
-		row.Cells = append(row.Cells, widget.TextGridCell{
-			Rune:  rune('║'),
-			Style: widget.TextGridStyleWhitespace,
-		})
-		row.Cells = append(row.Cells, widget.TextGridCell{
-			Style: widget.TextGridStyleWhitespace,
-		})
-
 		for x, bb := range buff[:n] {
 			asd := fmt.Sprintf("%02X", bb)
-			row.Cells = append(row.Cells, widget.TextGridCell{
+			rw1 := widget.TextGridCell{
 				Rune: rune(asd[0]),
 				Style: &widget.CustomTextGridStyle{
 					FGColor: viewColor(pos),
 				},
-			})
+			}
+			row.Cells = append(row.Cells, rw1)
 
-			row.Cells = append(row.Cells, widget.TextGridCell{
+			rw2 := widget.TextGridCell{
 				Rune: rune(asd[1]),
 				Style: &widget.CustomTextGridStyle{
 					FGColor: viewColor(pos),
 				},
-			})
+			}
+
+			row.Cells = append(row.Cells, rw2)
 			if x < rowWidth-1 {
 				row.Cells = append(row.Cells, widget.TextGridCell{
 					Style: widget.TextGridStyleWhitespace,
@@ -755,9 +351,6 @@ func generateGrid(data []byte) []widget.TextGridRow {
 			})
 			rPos++
 		}
-		row.Cells = append(row.Cells, widget.TextGridCell{
-			Style: widget.TextGridStyleWhitespace,
-		})
 		rows = append(rows, row)
 	}
 	return rows

@@ -12,5 +12,7 @@ test:
 	go run . read --chip 66 --size 256 --org 16 256_read.bin
 
 gui:
+	rm -f avr/firmware.hex
+	cp firmware/build/firmware.ino.hex avr/firmware.hex
 	fyne package --target windows --icon Icon.png --release 
 # --appVersion $$(git describe --tags `git rev-list --tags --max-count=1`|cut -d"v" -f2)
