@@ -8,7 +8,7 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define WIRE_VERSION "v2.0.8\n"
+#define WIRE_VERSION "v2.0.9\n"
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 150);
 
@@ -112,6 +112,7 @@ void handleCmd()
     }
 
     ep.powerUp();
+    delay(20);
     switch (buffer[0])
     {
     case 'r':
@@ -246,6 +247,7 @@ void settings()
 
 void read()
 {
+    delay(20);
     bufferLength = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
