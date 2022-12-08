@@ -1,8 +1,8 @@
 package gui
 
 import (
+	"log"
 	"net/url"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
@@ -11,27 +11,24 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VERSION = "v2.0.9"
+const VERSION = "v2.0.10"
 
 type EEPGui struct {
-	app   fyne.App
-	state *AppState
-	mw    *MainWindow
-	hw    *HelpWindow
-	sw    *SettingsWindow
-}
-
-type AppState struct {
 	port            string
 	portList        []string
 	hwVersion       binding.String
 	readDelayValue  binding.Float
 	writeDelayValue binding.Float
 	ignoreError     binding.Bool
+
+	mw *mainWindow
+	sw *settingsWindow
+	fyne.App
 }
 
-func Run(a fyne.App) {
-	state := &AppState{
+func New(a fyne.App) *EEPGui {
+	eep := &EEPGui{
+		App:             a,
 		port:            a.Preferences().String("port"),
 		hwVersion:       binding.NewString(),
 		readDelayValue:  binding.NewFloat(),
@@ -39,49 +36,51 @@ func Run(a fyne.App) {
 		ignoreError:     binding.NewBool(),
 	}
 
-	prefs := a.Preferences()
+	eep.loadPrefs()
+	eep.mw = newMainWindow(eep)
+
+	return eep
+}
+
+func (e *EEPGui) loadPrefs() {
+	prefs := e.Preferences()
 
 	hw := prefs.StringWithFallback("hardware_version", "Uno")
-	if err := state.hwVersion.Set(hw); err != nil {
-		panic(err)
+	if err := e.hwVersion.Set(hw); err != nil {
+		log.Fatal(err)
 	}
 
-	r := prefs.FloatWithFallback("read_pin_delay", 75)
-	if err := state.readDelayValue.Set(r); err != nil {
-		panic(err)
+	readPinDelay := prefs.FloatWithFallback("read_pin_delay", 150)
+	if err := e.readDelayValue.Set(readPinDelay); err != nil {
+		log.Fatal(err)
 	}
 
-	w := prefs.FloatWithFallback("write_pin_delay", 150)
-	if err := state.writeDelayValue.Set(w); err != nil {
-		panic(err)
+	writePinDelay := prefs.FloatWithFallback("write_pin_delay", 150)
+	if err := e.writeDelayValue.Set(writePinDelay); err != nil {
+		log.Fatal(err)
 	}
 
 	ignoreError := prefs.BoolWithFallback("ignore_read_errors", false)
-	if err := state.ignoreError.Set(ignoreError); err != nil {
-		panic(err)
+	if err := e.ignoreError.Set(ignoreError); err != nil {
+		log.Fatal(err)
 	}
+}
 
-	eep := &EEPGui{
-		app:   a,
-		state: state,
-	}
-
-	eep.mw = NewMainWindow(eep)
-
-	go func() {
-		time.Sleep(2 * time.Second)
-		latest, err := update.GetLatest()
-		if err == nil {
-			if semver.Compare(latest.TagName, VERSION) > 0 {
-				dialog.ShowConfirm("Software update", "There is a new version available, would you like to visit the download page?", func(ok bool) {
-					if ok {
-						u, _ := url.Parse("https://github.com/Hirschmann-Koxha-GbR/eep/releases/latest")
-						eep.app.OpenURL(u)
-					}
-				}, eep.mw.w)
-			}
+func (e *EEPGui) CheckUpdate() {
+	latest, err := update.GetLatest()
+	if err == nil {
+		if semver.Compare(latest.TagName, VERSION) > 0 {
+			dialog.ShowConfirm("Software update", "There is a new version available, would you like to visit the download page?", func(ok bool) {
+				if ok {
+					u, _ := url.Parse("https://github.com/Hirschmann-Koxha-GbR/eep/releases/latest")
+					e.OpenURL(u)
+				}
+			}, e.mw)
 		}
-	}()
+	}
+}
 
-	a.Run()
+func (e *EEPGui) Start() {
+	e.mw.Show()
+	e.Run()
 }

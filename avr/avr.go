@@ -16,7 +16,7 @@ var avrdudeConf []byte
 //go:embed avrdude.exe
 var avrdudeExe []byte
 
-func Update(port, board string, cb func(format string, values ...interface{}) int) ([]byte, error) {
+func Update(port, board string, cb func(format string, values ...interface{})) ([]byte, error) {
 	var portSpeed string
 	switch board {
 	case "Nano":

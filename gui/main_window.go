@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -17,9 +18,11 @@ import (
 	sdialog "github.com/sqweek/dialog"
 )
 
-type MainWindow struct {
+type mainWindow struct {
 	e *EEPGui
-	w fyne.Window
+
+	hw fyne.Window
+	aw fyne.Window
 
 	logList binding.StringList
 	log     *widget.List
@@ -27,93 +30,149 @@ type MainWindow struct {
 	rescanButton *widget.Button
 	portList     *widget.Select
 
-	editButton  *widget.Button
-	viewButton  *widget.Button
-	readButton  *widget.Button
-	writeButton *widget.Button
-	eraseButton *widget.Button
+	editButton     *widget.Button
+	viewButton     *widget.Button
+	readButton     *widget.Button
+	writeButton    *widget.Button
+	eraseButton    *widget.Button
+	helpButton     *widget.Button
+	copyButton     *widget.Button
+	clearButton    *widget.Button
+	settingsButton *widget.Button
 
 	progressBar *widget.ProgressBar
+
+	fyne.Window
 }
 
-func NewMainWindow(e *EEPGui) *MainWindow {
-	w := e.app.NewWindow("Saab CIM Tool by Hirschmann-Koxha GbR " + VERSION)
-	w.SetMaster()
-	m := &MainWindow{e: e, w: w}
-	w.SetContent(m.layout())
-	w.Resize(fyne.NewSize(1200, 600))
-	w.Show()
-	return m
-}
+var mainSize = fyne.NewSize(1200, 600)
 
-func (m *MainWindow) layout() fyne.CanvasObject {
-	logList := binding.NewStringList()
-	m.logList = logList
+func newMainWindow(e *EEPGui) *mainWindow {
+	m := &mainWindow{
+		Window:      e.NewWindow("Saab CIM Tool " + VERSION),
+		e:           e,
+		logList:     binding.NewStringList(),
+		progressBar: widget.NewProgressBar(),
+	}
 
-	m.log = createLogList(logList)
-	m.progressBar = widget.NewProgressBar()
+	m.SetMainMenu(fyne.NewMainMenu(
+		fyne.NewMenu("File",
+			&fyne.MenuItem{
+				Icon:  theme.HelpIcon(),
+				Label: "About",
+				Action: func() {
+					if m.aw != nil {
+						m.aw.RequestFocus()
+						return
+					}
+					m.aw = newAboutWindow(e)
+					m.aw.Show()
+				},
+			},
+			fyne.NewMenuItemSeparator(),
+			&fyne.MenuItem{
+				Icon:  theme.CancelIcon(),
+				Label: "Quit",
+				Action: func() {
+					e.Quit()
+				},
+			},
+		),
+	))
+
+	m.log = widget.NewListWithData(
+		m.logList,
+		func() fyne.CanvasObject {
+			return &widget.Label{
+				TextStyle: fyne.TextStyle{Monospace: true},
+			}
+		},
+		func(item binding.DataItem, obj fyne.CanvasObject) {
+			i := item.(binding.String)
+			txt, err := i.Get()
+			if err != nil {
+				panic(err)
+			}
+			if v, ok := obj.(*widget.Label); ok {
+				v.SetText(txt)
+			}
+		},
+	)
 
 	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() { m.portList.Options = m.listPorts() })
 
-	m.portList = widget.NewSelect(m.listPorts(), func(s string) {
-		m.e.state.port = s
-		m.e.app.Preferences().SetString("port", s)
-	})
-	m.portList.Alignment = fyne.TextAlignCenter
-
-	if m.e.state.port != "" {
-		m.portList.PlaceHolder = m.e.state.port
+	m.portList = &widget.Select{
+		PlaceHolder: m.e.port,
+		Alignment:   fyne.TextAlignCenter,
+		Options:     m.listPorts(),
+		OnChanged: func(s string) {
+			m.e.port = s
+			m.e.Preferences().SetString("port", s)
+		},
 	}
 
 	m.editButton = widget.NewButtonWithIcon("Edit", theme.FileIcon(), func() { NewEditWindow(m.e) })
-
 	m.viewButton = widget.NewButtonWithIcon("View", theme.SearchIcon(), m.viewClickHandler)
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)
 	m.eraseButton = widget.NewButtonWithIcon("Erase", theme.DeleteIcon(), m.eraseClickHandler)
+	m.helpButton = widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
+		if m.hw == nil {
+			m.hw = newHelpWindow(e)
+		} else {
+			m.hw.RequestFocus()
+		}
+	})
+	m.copyButton = widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
+		if content, err := m.logList.Get(); err == nil {
+			m.Clipboard().SetContent(strings.Join(content, "\n"))
+		}
+	})
+	m.clearButton = widget.NewButtonWithIcon("Clear log", theme.ContentClearIcon(), func() {
+		m.logList.Set([]string{})
+	})
+	m.settingsButton = widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
+		if m.e.sw == nil {
+			m.e.sw = newSettingsWindow(m.e)
+		} else {
+			m.e.sw.RequestFocus()
+		}
+	})
 
-	left := container.New(layout.NewMaxLayout(), m.log)
-	right := container.NewVBox(
-		m.rescanButton,
-		m.portList,
-		//m.editButton,
-		m.viewButton,
-		m.readButton,
-		m.writeButton,
-		m.eraseButton,
-		layout.NewSpacer(),
-		widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-			if m.e.hw == nil {
-				m.e.hw = NewHelpWindow(m.e)
-			} else {
-				m.e.hw.w.RequestFocus()
-			}
-		}),
-		widget.NewButtonWithIcon("Copy log", theme.ContentCopyIcon(), func() {
-			if content, err := m.logList.Get(); err == nil {
-				m.w.Clipboard().SetContent(strings.Join(content, "\n"))
-			}
-		}),
-		widget.NewButtonWithIcon("Clear log", theme.ContentClearIcon(), func() {
-			m.logList.Set([]string{})
-		}),
-		widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() {
-			if m.e.sw == nil {
-				m.e.sw = NewSettingsWindow(m.e)
-			} else {
-				m.e.sw.w.RequestFocus()
-			}
-		}),
-	)
-
-	split := container.NewHSplit(left, right)
-	split.Offset = 0.99
-	view := container.NewVSplit(split, m.progressBar)
-	view.Offset = 1
-	return view
+	m.SetContent(m.layout())
+	m.Resize(mainSize)
+	m.SetMaster()
+	m.Show()
+	return m
 }
 
-func (m *MainWindow) viewClickHandler() {
+func (m *mainWindow) layout() fyne.CanvasObject {
+	split := &container.Split{
+		Offset:     0.85,
+		Horizontal: true,
+		Leading:    container.NewVScroll(m.log),
+		Trailing: container.NewVBox(
+			m.rescanButton,
+			m.portList,
+			m.viewButton,
+			m.readButton,
+			m.writeButton,
+			m.eraseButton,
+			layout.NewSpacer(),
+			m.helpButton,
+			m.copyButton,
+			m.clearButton,
+			m.settingsButton,
+		),
+	}
+	return &container.Split{
+		Offset:   1,
+		Leading:  split,
+		Trailing: m.progressBar,
+	}
+}
+
+func (m *mainWindow) viewClickHandler() {
 	m.viewButton.Disable()
 	go func() {
 		defer m.viewButton.Enable()
@@ -132,36 +191,33 @@ func (m *MainWindow) viewClickHandler() {
 				if ok {
 					rawbin, err := os.ReadFile(filename)
 					if err != nil {
-						m.output(err.Error())
+						dialog.ShowError(err, m)
 						return
 					}
 					newViewerWindow(m.e, filename, rawbin, false)
 				}
-			}, m.w)
+			}, m)
 			return
 		}
 		b, err := bin.XORBytes()
 		if err != nil {
-			dialog.ShowError(err, m.w)
+			dialog.ShowError(err, m)
 			return
 		}
 		newViewerWindow(m.e, filename, b, false)
 	}()
-
 }
 
-func (m *MainWindow) readClickHandler() {
+func (m *mainWindow) readClickHandler() {
+	m.disableButtons()
 	go func() {
-		m.disableButtons()
 		defer m.enableButtons()
-		if m.e.state.port == "" {
+		if m.e.port == "" {
 			m.output("Please select a port first")
 			return
 		}
-
-		ignoreReadErrors, _ := m.e.state.ignoreError.Get()
-
-		rawBytes, bin, err := m.readCIM(m.e.state.port, 1)
+		ignoreReadErrors, _ := m.e.ignoreError.Get()
+		rawBytes, bin, err := m.readCIM(m.e.port, 1)
 		if err != nil {
 			m.output(err.Error())
 			if err.Error() == "Timeout reading eeprom" {
@@ -170,37 +226,27 @@ func (m *MainWindow) readClickHandler() {
 			if ignoreReadErrors {
 				m.saveFile("Save raw bin file", rawBytes)
 			} else {
-				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(b bool) {
-					if b {
+				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(ok bool) {
+					if ok {
 						newViewerWindow(m.e, fmt.Sprintf("failed read from %s", time.Now().Format(time.RFC1123Z)), rawBytes, true)
 					}
-				}, m.w)
+				}, m)
 			}
 			return
 		}
 
 		xorBytes, err := bin.XORBytes()
 		if err != nil {
-			m.output(err.Error())
+			dialog.ShowError(err, m)
 			return
 		}
-		/*
-			m.printKV("MD5", bin.MD5())
-			m.printKV("CRC32", bin.CRC32())
-			m.printKV("VIN", bin.Vin.Data)
-			m.printKV("MY", bin.ModelYear())
-			m.printKV("End model (HW+SW)", fmt.Sprintf("%d%s", bin.PartNo1, bin.PartNo1Rev))
-			m.printKV("Base model (HW+boot)", fmt.Sprintf("%d%s", bin.PnBase1, bin.PnBase1Rev))
-			m.printKV("Delphi part number", fmt.Sprintf("%d", bin.DelphiPN))
-			m.printKV("SAAB part number", fmt.Sprintf("%d", bin.PartNo))
-			m.printKV("Configuration Version", fmt.Sprintf("%d", bin.ConfigurationVersion))
-		*/
+
 		newViewerWindow(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)
 	}()
 }
 
-func (m *MainWindow) writeClickHandler() {
-	if m.e.state.port == "" {
+func (m *mainWindow) writeClickHandler() {
+	if m.e.port == "" {
 		m.output("Please select a port first")
 		return
 	}
@@ -214,25 +260,25 @@ func (m *MainWindow) writeClickHandler() {
 		return
 	}
 
-	dialog.ShowConfirm("Write to cim?", "Continue writing to CIM?", func(ok bool) {
+	dialog.ShowConfirm("Write to CIM?", "Continue writing to CIM?", func(ok bool) {
 		if ok {
-			m.output("Flashing CIM ... ")
 			start := time.Now()
 			go func() {
 				m.disableButtons()
 				defer m.enableButtons()
-				if ok := m.writeCIM(m.e.state.port, bin); !ok {
+				if ok := m.writeCIM(m.e.port, bin); !ok {
 					return
 				}
-				m.output("Flashed %s, took %s", filename, time.Since(start).String())
+				//m.output("Flashed %s, took %s", filename, time.Since(start).String())
+				dialog.ShowInformation("Write done", fmt.Sprintf("Flashed %s, took %s", filename, time.Since(start).Round(time.Millisecond).String()), m)
 			}()
 
 		}
-	}, m.w)
+	}, m)
 }
 
-func (m *MainWindow) eraseClickHandler() {
-	if m.e.state.port == "" {
+func (m *mainWindow) eraseClickHandler() {
+	if m.e.port == "" {
 		m.output("Please select a port first")
 		return
 	}
@@ -243,7 +289,7 @@ func (m *MainWindow) eraseClickHandler() {
 				m.disableButtons()
 				defer m.enableButtons()
 				start := time.Now()
-				sr, err := m.openPort(m.e.state.port)
+				sr, err := m.openPort(m.e.port)
 				if sr != nil {
 					defer sr.Close()
 				}
@@ -262,10 +308,10 @@ func (m *MainWindow) eraseClickHandler() {
 			}()
 
 		}
-	}, m.w)
+	}, m)
 }
 
-func (m *MainWindow) saveFile(title string, data []byte) bool {
+func (m *mainWindow) saveFile(title string, data []byte) bool {
 	filename, err := sdialog.File().Filter("Bin file", "bin").Title(title).Save()
 	if err != nil {
 		if err.Error() == "Cancelled" {
@@ -305,50 +351,19 @@ func addSuffix(s, suffix string) string {
 	return s
 }
 
-//func (m *MainWindow) printKV(k, v string) {
-//	m.output(k + ": " + v)
-//}
-
-func createLogList(listData binding.StringList) *widget.List {
-	return widget.NewListWithData(
-		listData,
-		func() fyne.CanvasObject {
-			w := widget.NewLabel("")
-			w.TextStyle.Monospace = true
-			return w
-		},
-		func(item binding.DataItem, obj fyne.CanvasObject) {
-			i := item.(binding.String)
-			txt, err := i.Get()
-			if err != nil {
-				panic(err)
-			}
-			obj.(*widget.Label).SetText(txt)
-		},
-	)
-}
-
-func (m *MainWindow) output(format string, values ...interface{}) int {
-	var text string
-	if format != "" {
-		text = fmt.Sprintf("%s - %s", time.Now().Format("15:04:05.000"), fmt.Sprintf(format, values...))
+func (m *mainWindow) output(format string, values ...interface{}) {
+	scanner := bufio.NewScanner(strings.NewReader(fmt.Sprintf(format, values...)))
+	for scanner.Scan() {
+		var text string
+		if format != "" {
+			text = fmt.Sprintf("%s - %s", time.Now().Format("15:04:05.000"), scanner.Text())
+		}
+		m.logList.Append(text)
+		m.log.ScrollToBottom()
 	}
-	m.logList.Append(text)
-	m.log.Refresh()
-	m.log.ScrollToBottom()
-	return m.logList.Length()
 }
 
-//func (m *MainWindow) append(format string, values ...interface{}) {
-//	di, err := m.logList.GetValue(m.logList.Length() - 1)
-//	if err != nil {
-//		panic(err)
-//	}
-//	m.logList.SetValue(m.logList.Length()-1, di+fmt.Sprintf(format, values...))
-//	m.log.Refresh()
-//}
-
-func (m *MainWindow) disableButtons() {
+func (m *mainWindow) disableButtons() {
 	m.rescanButton.Disable()
 	m.portList.Disable()
 	//m.viewButton.Disable()
@@ -357,7 +372,7 @@ func (m *MainWindow) disableButtons() {
 	m.eraseButton.Disable()
 }
 
-func (m *MainWindow) enableButtons() {
+func (m *mainWindow) enableButtons() {
 	m.rescanButton.Enable()
 	m.readButton.Enable()
 	m.portList.Enable()

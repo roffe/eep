@@ -7,17 +7,16 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
 )
 
 type EditWindow struct {
-	e   *EEPGui
-	w   fyne.Window
-	bin *cim.Bin
+	e *EEPGui
+	w fyne.Window
+	//bin *cim.Bin
 }
 
 func NewEditWindow(e *EEPGui) {
-	w := e.app.NewWindow("Editor")
+	w := e.NewWindow("Editor")
 	w.Resize(fyne.NewSize(450, 600))
 
 	ew := &EditWindow{e: e, w: w}

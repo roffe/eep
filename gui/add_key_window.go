@@ -65,37 +65,37 @@ func newAddKey(vw *viewerWindow) func() {
 		form.OnSubmit = func() {
 			keyID, err := hex.DecodeString(ideEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, vw.w)
+				dialog.ShowError(err, vw)
 				return
 			}
 
 			if err := vw.cimBin.SetKeyID(uint8(vw.cimBin.Keys.Count1), keyID); err != nil {
-				dialog.ShowError(err, vw.w)
+				dialog.ShowError(err, vw)
 				return
 			}
 
 			syncData, err := hex.DecodeString(syncEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, vw.w)
+				dialog.ShowError(err, vw)
 				return
 			}
 
 			if err := vw.cimBin.SetSyncData(uint8(vw.cimBin.Keys.Count1), syncData); err != nil {
-				dialog.ShowError(err, vw.w)
+				dialog.ShowError(err, vw)
 				return
 			}
 			if err := vw.cimBin.SetKeyCount(vw.cimBin.Keys.Count1 + 1); err != nil {
-				dialog.ShowError(err, vw.w)
+				dialog.ShowError(err, vw)
 				return
 			}
-			vw.w.SetContent(vw.layout())
+			vw.SetContent(vw.layout())
 		}
 
-		vw.w.SetContent(container.NewVBox(
+		vw.SetContent(container.NewVBox(
 			form,
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("Close", theme.DeleteIcon(), func() {
-				vw.w.SetContent(vw.layout())
+				vw.SetContent(vw.layout())
 			}),
 		))
 	}

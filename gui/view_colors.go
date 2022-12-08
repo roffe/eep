@@ -2,34 +2,40 @@ package gui
 
 import "image/color"
 
-type colorDesc struct {
-	name  string
-	start int
-	end   int
-	color color.RGBA
+func init() {
+	for pos := 0; pos < 512; pos++ {
+		for _, c := range colorList {
+			if (c.start == c.end && c.start == pos) || (pos >= c.start && pos <= c.end) {
+				colorMap[pos] = c.color
+				break
+			}
+		}
+	}
+}
+
+func viewColor(pos int) color.RGBA {
+	if color, found := colorMap[pos]; found {
+		return color
+	}
+	return rgb(255, 255, 255)
 }
 
 func rgb(r, g, b uint8) color.RGBA {
 	return color.RGBA{R: r, G: g, B: b, A: 1}
 }
 
-func viewColor(pos int) color.RGBA {
-	for _, c := range colorList {
-		if (c.start == c.end) && c.start == pos {
-			return c.color
-		}
-		if pos >= c.start && pos <= c.end {
-			return c.color
-		}
-	}
-	return rgb(255, 255, 255)
-}
-
 var (
+	colorMap = make(map[int]color.RGBA)
+
 	colorChecksum = rgb(0, 255, 0)
 	colorUnknown  = rgb(33, 33, 33)
 
-	colorList = []colorDesc{
+	colorList = []struct {
+		name  string
+		start int
+		end   int
+		color color.RGBA
+	}{
 		{
 			name:  "Programming date",
 			start: 0x0,
@@ -310,37 +316,49 @@ var (
 			color: colorChecksum,
 		},
 		{
-			name:  "Sync Data",
+			name:  "Sync Data #1",
 			start: 0x160,
 			end:   0x173,
 			color: rgb(200, 220, 130),
 		},
 		{
-			name:  "Sync Data CRC",
+			name:  "Sync Data #1 CRC",
 			start: 0x174,
 			end:   0x175,
 			color: colorChecksum,
 		},
 		{
-			name:  "Unknown Data 6 #1",
-			start: 0x176,
-			end:   0x189,
-			color: colorUnknown,
+			name:  "Sync Data #2",
+			start: 0x160,
+			end:   0x173,
+			color: rgb(200, 220, 130),
 		},
 		{
-			name:  "Unknown Data 6 #1 CRC",
+			name:  "Sync Data #2 CRC",
+			start: 0x174,
+			end:   0x175,
+			color: colorChecksum,
+		},
+		{
+			name:  "Sync Bank #1",
+			start: 0x176,
+			end:   0x189,
+			color: rgb(100,20,40),
+		},
+		{
+			name:  "Sync Bank #1 CRC",
 			start: 0x18a,
 			end:   0x18b,
 			color: colorChecksum,
 		},
 		{
-			name:  "Unknown Data 6 #2",
+			name:  "Sync Bank #2",
 			start: 0x18c,
 			end:   0x19f,
-			color: colorUnknown,
+			color: rgb(100,20,40),
 		},
 		{
-			name:  "Unknown Data 6 #2 CRC",
+			name:  "Sync Bank #2 CRC",
 			start: 0x1a0,
 			end:   0x1a1,
 			color: colorChecksum,

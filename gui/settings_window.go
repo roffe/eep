@@ -13,9 +13,8 @@ import (
 	"github.com/hirschmann-koxha-gbr/eep/avr"
 )
 
-type SettingsWindow struct {
+type settingsWindow struct {
 	e                *EEPGui
-	w                fyne.Window
 	hwVerSelect      *widget.Select
 	ignoreError      *widget.Check
 	readSliderLabel  *widget.Label
@@ -23,56 +22,58 @@ type SettingsWindow struct {
 	writeSliderLabel *widget.Label
 	writeSlider      *widget.Slider
 	updateButton     *widget.Button
+
+	fyne.Window
 }
 
-func NewSettingsWindow(e *EEPGui) *SettingsWindow {
-	w := e.app.NewWindow("Settings")
+func newSettingsWindow(e *EEPGui) *settingsWindow {
+	w := e.NewWindow("Settings")
 	w.CenterOnScreen()
 	w.SetOnClosed(func() {
 		e.sw = nil
 	})
-	sw := &SettingsWindow{
-		e: e,
-		w: w,
+	sw := &settingsWindow{
+		e:      e,
+		Window: w,
 		hwVerSelect: widget.NewSelect([]string{"Uno", "Nano", "Nano (old bootloader)"}, func(s string) {
-			e.state.hwVersion.Set(s)
-			e.app.Preferences().SetString("hardware_version", s)
+			e.hwVersion.Set(s)
+			e.Preferences().SetString("hardware_version", s)
 		}),
-		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.state.ignoreError),
+		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.ignoreError),
 		readSliderLabel:  widget.NewLabel(""),
-		readSlider:       widget.NewSliderWithData(0, 255, e.state.readDelayValue),
+		readSlider:       widget.NewSliderWithData(0, 255, e.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
-		writeSlider:      widget.NewSliderWithData(0, 255, e.state.writeDelayValue),
+		writeSlider:      widget.NewSliderWithData(0, 255, e.writeDelayValue),
 	}
 
-	if f, err := sw.e.state.readDelayValue.Get(); err == nil {
+	if f, err := sw.e.readDelayValue.Get(); err == nil {
 		sw.readSliderLabel.SetText(delayLabel("Read", f))
 	}
 
-	if f, err := sw.e.state.writeDelayValue.Get(); err == nil {
+	if f, err := sw.e.writeDelayValue.Get(); err == nil {
 		sw.writeSliderLabel.SetText(delayLabel("Write", f))
 	}
 
 	sw.hwVerSelect.Alignment = fyne.TextAlignCenter
 	sw.hwVerSelect.PlaceHolder = "Select Arduino version"
-	if hwVer, err := e.state.hwVersion.Get(); err == nil {
+	if hwVer, err := e.hwVersion.Get(); err == nil {
 		sw.hwVerSelect.SetSelected(hwVer)
 	}
 
 	sw.ignoreError.OnChanged = func(b bool) {
-		sw.e.app.Preferences().SetBool("ignore_read_errors", b)
+		sw.e.Preferences().SetBool("ignore_read_errors", b)
 	}
 
 	sw.readSlider.OnChanged = func(f float64) {
 		sw.readSliderLabel.SetText(delayLabel("Read", f))
-		sw.e.app.Preferences().SetFloat("read_pin_delay", f)
-		sw.e.state.readDelayValue.Set(f)
+		sw.e.Preferences().SetFloat("read_pin_delay", f)
+		sw.e.readDelayValue.Set(f)
 	}
 
 	sw.writeSlider.OnChanged = func(f float64) {
 		sw.writeSliderLabel.SetText(delayLabel("Write", f))
-		sw.e.app.Preferences().SetFloat("write_pin_delay", f)
-		sw.e.state.writeDelayValue.Set(f)
+		sw.e.Preferences().SetFloat("write_pin_delay", f)
+		sw.e.writeDelayValue.Set(f)
 	}
 
 	sw.updateButton = widget.NewButtonWithIcon("Update firmware", theme.WarningIcon(), func() {
@@ -82,12 +83,12 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 		sw.e.mw.disableButtons()
 		defer sw.e.mw.enableButtons()
 
-		hwVer, err := sw.e.state.hwVersion.Get()
+		hwVer, err := sw.e.hwVersion.Get()
 		if err != nil {
 			hwVer = "Uno"
 		}
 
-		out, err := avr.Update(sw.e.state.port, hwVer, sw.e.mw.output)
+		out, err := avr.Update(sw.e.port, hwVer, sw.e.mw.output)
 		if err != nil {
 			sw.e.mw.output("Error updating: %v", err)
 			return
@@ -101,18 +102,20 @@ func NewSettingsWindow(e *EEPGui) *SettingsWindow {
 
 	})
 
-	sw.w.SetContent(sw.layout())
+	sw.SetContent(sw.layout())
 	w.Resize(fyne.NewSize(400, 220))
 	w.Show()
 	return sw
 }
 
-func (sw *SettingsWindow) layout() fyne.CanvasObject {
+func (sw *settingsWindow) layout() fyne.CanvasObject {
 
 	return container.NewVBox(
-		widget.NewLabelWithStyle("CIM Tool Version: "+VERSION, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		&widget.Label{
+			Text:      "CIM Tool Version: " + VERSION,
+			TextStyle: fyne.TextStyle{Bold: true},
+		},
 		container.NewHBox(widget.NewLabel("Arduino"), sw.hwVerSelect),
-
 		sw.ignoreError,
 		sw.readSliderLabel,
 		sw.readSlider,
@@ -120,10 +123,13 @@ func (sw *SettingsWindow) layout() fyne.CanvasObject {
 		sw.writeSlider,
 		layout.NewSpacer(),
 		sw.updateButton,
-		layout.NewSpacer(),
-		widget.NewButton("Save settings", func() {
-			sw.w.Close()
-		}),
+		&widget.Button{
+			Icon: theme.DocumentSaveIcon(),
+			Text: "Save settings",
+			OnTapped: func() {
+				sw.Close()
+			},
+		},
 	)
 }
 

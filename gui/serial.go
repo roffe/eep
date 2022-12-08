@@ -24,7 +24,7 @@ const (
 	opErase = "e"
 )
 
-func (m *MainWindow) listPorts() []string {
+func (m *mainWindow) listPorts() []string {
 	var portsList []string
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
@@ -35,19 +35,6 @@ func (m *MainWindow) listPorts() []string {
 		m.output("No serial ports found!")
 		return []string{}
 	}
-
-	/*
-		for i := 0; i < 6; i++ {
-			ports = append(ports, &enumerator.PortDetails{
-				Name:         fmt.Sprintf("Dummy%d", i),
-				VID:          strconv.Itoa(i),
-				PID:          strconv.Itoa(i),
-				SerialNumber: "foo",
-				IsUSB:        true,
-			})
-		}
-	*/
-
 	m.output("Detected ports")
 	for i, port := range ports {
 		pref := " "
@@ -64,13 +51,13 @@ func (m *MainWindow) listPorts() []string {
 			portsList = append(portsList, port.Name)
 		}
 	}
-	m.e.state.portList = portsList
+	m.e.portList = portsList
 	return portsList
 }
 
 var speeds = []int{57600, 1000000, 57600}
 
-func (m *MainWindow) openPort(port string) (serial.Port, error) {
+func (m *mainWindow) openPort(port string) (serial.Port, error) {
 	mode := &serial.Mode{
 		BaudRate: 1000000,
 		DataBits: 8,
@@ -91,7 +78,6 @@ func (m *MainWindow) openPort(port string) (serial.Port, error) {
 			sr.Close()
 			return err
 		}
-
 		if ver, err := getVersion(sr); err != nil {
 			sr.Close()
 			return err
@@ -111,11 +97,11 @@ func (m *MainWindow) openPort(port string) (serial.Port, error) {
 		}),
 		retry.Attempts(3),
 		retry.Delay(200*time.Millisecond),
+		retry.LastErrorOnly(true),
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	return sr, nil
 }
 
@@ -143,8 +129,8 @@ func getVersion(stream serial.Port) (string, error) {
 	}
 }
 
-func (m *MainWindow) writeCIM(port string, data []byte) bool {
-	sr, err := m.openPort(m.e.state.port)
+func (m *mainWindow) writeCIM(port string, data []byte) bool {
+	sr, err := m.openPort(m.e.port)
 	if sr != nil {
 		defer sr.Close()
 	}
@@ -152,16 +138,16 @@ func (m *MainWindow) writeCIM(port string, data []byte) bool {
 		m.output("Failed to init adapter: %v", err)
 		return false
 	}
+	m.output("Writing CIM ... ")
 	if err := m.write(context.TODO(), sr, data); err != nil {
-		//m.output("Failed to write: %v", err)
-		dialog.ShowError(fmt.Errorf("Failed to write %v", err), m.w) //lint:ignore ST1005 ignore
+		dialog.ShowError(fmt.Errorf("Failed to write %v", err), m) //lint:ignore ST1005 ignore
 		return false
 	}
 	return true
 }
 
-func (m *MainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
-	sr, err := m.openPort(m.e.state.port)
+func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
+	sr, err := m.openPort(m.e.port)
 	if sr != nil {
 		defer sr.Close()
 	}
@@ -188,7 +174,7 @@ func (m *MainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
 	return rawBytes, bin, nil
 }
 
-func (m *MainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
+func (m *mainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 	bin, err := m.read(ctx, sr, 66, 512, 8, m.progressBar)
@@ -199,8 +185,8 @@ func (m *MainWindow) readN(sr serial.Port) ([]byte, *cim.Bin, error) {
 	return bin, cb, err
 }
 
-func (m *MainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
-	f, err := m.e.state.readDelayValue.Get()
+func (m *mainWindow) read(ctx context.Context, stream serial.Port, chip uint8, size uint16, org uint8, p *widget.ProgressBar) ([]byte, error) {
+	f, err := m.e.readDelayValue.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +218,6 @@ func waitAck(stream serial.Port, char byte, timeout time.Duration) error {
 
 func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, delay uint8) error {
 	cmd := fmt.Sprintf("%s,%d,%d,%d,%d\r", op, chip, size, org, delay)
-	//log.Println(cmd)
 	n, err := stream.Write([]byte(cmd))
 	if err != nil {
 		return err
@@ -245,7 +230,6 @@ func sendCMD(stream serial.Port, op string, chip uint8, size uint16, org uint8, 
 
 func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) ([]byte, error) {
 	out := make([]byte, 512)
-	//buff := bytes.NewBuffer(nil)
 	readBuffer := make([]byte, 32)
 	pos := 0
 	lastRead := time.Now()
@@ -280,8 +264,8 @@ func readBytes(ctx context.Context, stream serial.Port, p *widget.ProgressBar) (
 	return out, nil
 }
 
-func (m *MainWindow) erase(stream serial.Port) error {
-	f, err := m.e.state.writeDelayValue.Get()
+func (m *mainWindow) erase(stream serial.Port) error {
+	f, err := m.e.writeDelayValue.Get()
 	if err != nil {
 		return err
 	}
@@ -299,8 +283,8 @@ func (m *MainWindow) erase(stream serial.Port) error {
 	return nil
 }
 
-func (m *MainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
-	f, err := m.e.state.writeDelayValue.Get()
+func (m *mainWindow) write(ctx context.Context, stream serial.Port, data []byte) error {
+	f, err := m.e.writeDelayValue.Get()
 	if err != nil {
 		return err
 	}
@@ -335,7 +319,7 @@ func (m *MainWindow) write(ctx context.Context, stream serial.Port, data []byte)
 				select {
 				case <-sendLock:
 				default:
-					dialog.ShowError(errors.New("serial lock error"), m.w)
+					dialog.ShowError(errors.New("serial lock error"), m)
 				}
 			}
 
