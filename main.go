@@ -21,20 +21,18 @@ func init() {
 }
 
 func main() {
-	quitChan :=make(chan os.Signal,2)
+	quitChan := make(chan os.Signal, 1)
 	signal.Notify(quitChan, syscall.SIGTERM, syscall.SIGINT)
 	a := app.NewWithID("com.cimtool")
 	a.SetIcon(appIcon)
 	a.Settings().SetTheme(&gui.Theme{})
-	
 	app := gui.New(a)
-	
-	a.Lifecycle().SetOnStarted(func() { app.CheckUpdate() })
-	
-	go func() {
-		<-quitChan
-		a.Quit()
-	}()
+	a.Lifecycle().SetOnStarted(app.CheckUpdate)
+	go quitHandler(quitChan, a)
+	app.Run()
+}
 
-	a.Run()
+func quitHandler(quitChan chan os.Signal, app fyne.App) {
+	<-quitChan
+	app.Quit()
 }

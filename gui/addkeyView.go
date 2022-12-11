@@ -11,7 +11,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func newAddKey(vw *viewerWindow) func() {
+func newAddKeyView(vw *viewerWindow) func() {
 	return func() {
 		ideEntry := widget.NewEntry()
 		ideEntry.OnChanged = func(s string) {

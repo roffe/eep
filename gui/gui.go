@@ -79,8 +79,3 @@ func (e *EEPGui) CheckUpdate() {
 		}
 	}
 }
-
-func (e *EEPGui) Start() {
-	e.mw.Show()
-	e.Run()
-}

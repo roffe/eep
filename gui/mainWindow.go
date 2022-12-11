@@ -30,7 +30,6 @@ type mainWindow struct {
 	rescanButton *widget.Button
 	portList     *widget.Select
 
-	editButton     *widget.Button
 	viewButton     *widget.Button
 	readButton     *widget.Button
 	writeButton    *widget.Button
@@ -111,7 +110,6 @@ func newMainWindow(e *EEPGui) *mainWindow {
 		},
 	}
 
-	m.editButton = widget.NewButtonWithIcon("Edit", theme.FileIcon(), func() { NewEditWindow(m.e) })
 	m.viewButton = widget.NewButtonWithIcon("View", theme.SearchIcon(), m.viewClickHandler)
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)

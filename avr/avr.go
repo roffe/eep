@@ -1,8 +1,11 @@
 package avr
 
 import (
+	"archive/zip"
 	"bufio"
+	"bytes"
 	_ "embed"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -13,8 +16,8 @@ var firmwareHex []byte
 //go:embed avrdude.conf
 var avrdudeConf []byte
 
-//go:embed avrdude.exe
-var avrdudeExe []byte
+//go:embed avrdude_.zip
+var avrdudeZip []byte
 
 func Update(port, board string, cb func(format string, values ...interface{})) ([]byte, error) {
 	var portSpeed string
@@ -34,7 +37,12 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 	}
 	defer os.Remove("avrdude.conf")
 
-	if err := os.WriteFile("avrdude.exe", avrdudeExe, 0755); err != nil {
+	b, err := getAvrdudeBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile("avrdude.exe", b, 0755); err != nil {
 		return nil, err
 	}
 	defer os.Remove("avrdude.exe")
@@ -98,4 +106,27 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 	}
 
 	return nil, nil
+}
+
+func getAvrdudeBytes() ([]byte, error) {
+	data := make([]byte, len(avrdudeZip))
+	for i, bb := range avrdudeZip {
+		data[i] = bb ^ 0x69
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(avrdudeZip)))
+	if err != nil {
+		return nil, err
+	}
+	zf, err := zipReader.Open("avrdude.exe")
+	if err != nil {
+		return nil, err
+	}
+	defer zf.Close()
+
+	b, err := io.ReadAll(zf)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }

@@ -146,16 +146,21 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		vw.Resize(fyne.NewSize(920, 240))
 	})
 
-	home := func() {
+	homeAction := widget.NewToolbarAction(theme.HomeIcon(), func() {
 		if vw.cimBin != nil {
 			vw.SetContent(vw.layout())
 			vw.Resize(viewWindowSize)
 		}
-	}
+	})
+
+	editAction := widget.NewToolbarAction(theme.WarningIcon(), func() {
+		vw.SetContent(newEditView(vw))
+	})
 
 	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.HomeIcon(), home),
+		homeAction,
 		saveAction,
+		widget.NewToolbarSeparator(),
 	)
 
 	if vw.cimBin != nil {
@@ -163,7 +168,8 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		toolbar.Append(resetAction)
 		toolbar.Append(hexAction)
 	}
-
+	toolbar.Append(widget.NewToolbarSpacer())
+	toolbar.Append(editAction)
 	return toolbar
 }
 
@@ -172,16 +178,15 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 	sasSelect := &widget.Select{
 		Options: []string{"Yes", "No"},
 		OnChanged: func(s string) {
-			vw.cimBin.SetSasOpt(s=="Yes")
+			vw.cimBin.SetSasOpt(s == "Yes")
 		},
-		Selected: func()string{
+		Selected: func() string {
 			if vw.cimBin.GetSasOpt() {
 				return "Yes"
 			}
 			return "No"
 		}(),
 	}
-	
 
 	iskEntry := &widget.Entry{
 		Text:     fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
@@ -245,7 +250,7 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 			)
 		},
 		UpdateItem: func(item widget.ListItemID, obj fyne.CanvasObject) {
-			c,ok := obj.(*fyne.Container)
+			c, ok := obj.(*fyne.Container)
 			if ok {
 				c.Objects[0].(*widget.Label).SetText(fmt.Sprintf("Key #%d", item))
 				c.Objects[2].(*widget.Label).SetText(vw.cimBin.Keys.Data1[item].Type())
@@ -271,7 +276,7 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 	keysTab := container.NewTabItemWithIcon("Keys", theme.LoginIcon(),
 		container.NewBorder(
 			nil,
-			widget.NewButton("Add key", newAddKey(vw)),
+			widget.NewButtonWithIcon("Add key", theme.ContentAddIcon(), newAddKeyView(vw)),
 			nil,
 			nil,
 			vw.keyList,
