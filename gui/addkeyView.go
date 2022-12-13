@@ -2,67 +2,58 @@ package gui
 
 import (
 	"encoding/hex"
-	"errors"
+	"image/color"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
-func newAddKeyView(vw *viewerWindow) func() {
-	return func() {
-		ideEntry := widget.NewEntry()
-		ideEntry.OnChanged = func(s string) {
-			if len(s) > 8 {
-				ideEntry.SetText(s[:8])
-				return
-			}
+func (vw *viewerWindow) addKey() {
+	ideEntry := &widget.Entry{
+		Wrapping:  fyne.TextWrapOff,
+		Validator: hexValidator(8),
+	}
+	ideEntry.OnChanged = func(s string) {
+		if len(s) > 8 {
+			ideEntry.SetText(s[:8])
+			return
 		}
-		ideEntry.Validator = func(s string) error {
-			if len(s) != 8 {
-				return errors.New("invalid length")
-			}
-			if _, err := hex.DecodeString(s); err != nil {
-				return errors.New("invalid hex value")
-			}
-			return nil
+	}
+
+	syncEntry := &widget.Entry{
+		Wrapping:  fyne.TextWrapOff,
+		Validator: hexValidator(8),
+	}
+	syncEntry.OnChanged = func(s string) {
+		if len(s) > 8 {
+			syncEntry.SetText(s[:8])
+			return
 		}
+	}
 
-		syncEntry := widget.NewEntry()
-		syncEntry.OnChanged = func(s string) {
-			if len(s) > 8 {
-				syncEntry.SetText(s[:8])
-				return
-			}
-		}
-		syncEntry.Validator = func(s string) error {
-			if len(s) != 8 {
-				return errors.New("invalid length")
-			}
-			if _, err := hex.DecodeString(s); err != nil {
-				return errors.New("invalid hex value")
-			}
-			return nil
-		}
+	rec := canvas.NewRectangle(color.Transparent)
+	rec.SetMinSize(fyne.NewSize(100, 10))
 
-		form := widget.NewForm(
-			&widget.FormItem{
-				Text:     "IDE",
-				HintText: "Enter Key ID",
-				Widget:   ideEntry,
-			},
-			&widget.FormItem{
-				Text:     "Sync",
-				HintText: "Enter Key Sync Data",
-				Widget:   syncEntry,
-			},
-		)
-
-		form.SubmitText = "Add key"
-
-		form.OnSubmit = func() {
+	dialog.ShowForm("Add key", "Add", "Cancel", []*widget.FormItem{
+		{
+			Text:     "IDE",
+			HintText: "Enter IDE",
+			Widget:   container.NewMax(rec, ideEntry),
+		},
+		{
+			Text:     "Sync",
+			HintText: "Enter Sync Data",
+			Widget:   container.NewMax(rec, syncEntry),
+		},
+		{
+			Widget: layout.NewSpacer(),
+		},
+	}, func(ok bool) {
+		if ok {
 			keyID, err := hex.DecodeString(ideEntry.Text)
 			if err != nil {
 				dialog.ShowError(err, vw)
@@ -88,15 +79,8 @@ func newAddKeyView(vw *viewerWindow) func() {
 				dialog.ShowError(err, vw)
 				return
 			}
-			vw.SetContent(vw.layout())
+			//vw.tabs.Refresh()
+			vw.keyList.Refresh()
 		}
-
-		vw.SetContent(container.NewVBox(
-			form,
-			layout.NewSpacer(),
-			widget.NewButtonWithIcon("Close", theme.DeleteIcon(), func() {
-				vw.SetContent(vw.layout())
-			}),
-		))
-	}
+	}, vw)
 }

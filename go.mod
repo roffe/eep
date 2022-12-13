@@ -12,21 +12,10 @@ require (
 )
 
 require (
-	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.7.7 // indirect
-	github.com/go-playground/locales v0.13.0 // indirect
-	github.com/go-playground/universal-translator v0.17.0 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/benoitkugler/textlayout v0.2.1 // indirect
+	github.com/go-text/typesetting v0.0.0-20221129122707-b081989d8c45 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
-	github.com/leodido/go-urn v1.2.0 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	github.com/ugorji/go/codec v1.1.7 // indirect
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
@@ -45,7 +34,7 @@ require (
 )
 
 require (
-	fyne.io/fyne/v2 v2.2.4
+	fyne.io/fyne/v2 v2.3.0-rc1
 	fyne.io/systray v1.10.1-0.20221115204952-d16a6177e6f1 // indirect
 	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect

@@ -41,6 +41,8 @@ func (Theme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x99}
 	case theme.ColorNameShadow:
 		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x66}
+	case theme.ColorNameSuccess:
+		return color.NRGBA{R: 0x0, G: 0xf0, B: 0x0, A: 0x66}
 	default:
 		return theme.DefaultTheme().Color(c, v)
 	}
@@ -83,6 +85,8 @@ func (Theme) Size(s fyne.ThemeSizeName) float32 {
 	case theme.SizeNameText:
 		return 12
 	case theme.SizeNameInputBorder:
+		return 2
+	case theme.SizeNameInnerPadding:
 		return 2
 	default:
 		return theme.DefaultTheme().Size(s)

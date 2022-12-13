@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
@@ -53,34 +54,35 @@ func newKeyView(e *EEPGui, vw *viewerWindow, index int, fw *cim.Bin) fyne.Canvas
 			}
 		}
 	}
+	c := canvas.NewRectangle(theme.BackgroundColor())
+	c.SetMinSize(fyne.NewSize(330, 250))
 
-	return container.NewVBox(
-		kv(vw, "Type", "%s", fw.Keys.Data1[index].Type()),
-		container.NewHBox(
-			newBoldEntry("P0 IDE"),
-			container.NewBorder(nil, nil, nil, nil, ideEntry),
-			layout.NewSpacer(),
-			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				e.mw.Clipboard().SetContent(ideEntry.Text)
-			}),
+	return container.NewMax(
+		c,
+		container.NewVBox(
+			kv(vw, "Type", "%s", fw.Keys.Data1[index].Type()),
+			container.NewHBox(
+				newBoldEntry("P0 IDE"),
+				container.NewBorder(nil, nil, nil, nil, ideEntry),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+					e.mw.Clipboard().SetContent(ideEntry.Text)
+				}),
+			),
+			kv(vw.e.mw, "P1 ISK Hi", "%X", fw.Keys.IskHI1),                // P1 ISK Hi, first 4 bytes
+			kv(vw.e.mw, "P2 ISK Lo", "%X", fw.Keys.IskLO1),                // P2 ISK Lo, 2 bytes reserved and two are remaining ISK bytes
+			kv(vw, "P4 PSK Hi", "%X%X", fw.PSK.High, fw.PSK.Constant[:2]), //PSK first 4 bytes (like on cim dump analyzer)
+			kv(vw, "P5 PSK Lo", "%X%X", fw.PSK.High, fw.PSK.Low[:2]),      // P5 is next two bytes of PSK but prefixed with its first two bytes
+			kv(vw, "P6 PCF", "%s", "6732F2C5"),
+			container.NewHBox(
+				newBoldEntry("P7 Sync"),
+				container.NewBorder(nil, nil, nil, nil, syncEntry),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+					e.mw.Clipboard().SetContent(syncEntry.Text)
+				}),
+			),
 		),
-		kv(vw.e.mw, "P1 ISK Hi", "%X", fw.Keys.IskHI1),                // P1 ISK Hi, first 4 bytes
-		kv(vw.e.mw, "P2 ISK Lo", "%X", fw.Keys.IskLO1),                // P2 ISK Lo, 2 bytes reserved and two are remaining ISK bytes
-		kv(vw, "P4 PSK Hi", "%X%X", fw.PSK.High, fw.PSK.Constant[:2]), //PSK first 4 bytes (like on cim dump analyzer)
-		kv(vw, "P5 PSK Lo", "%X%X", fw.PSK.High, fw.PSK.Low[:2]),      // P5 is next two bytes of PSK but prefixed with its first two bytes
-		kv(vw, "P6 PCF", "%s", "6732F2C5"),
-		container.NewHBox(
-			newBoldEntry("P7 Sync"),
-			container.NewBorder(nil, nil, nil, nil, syncEntry),
-			layout.NewSpacer(),
-			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				e.mw.Clipboard().SetContent(syncEntry.Text)
-			}),
-		),
-		layout.NewSpacer(),
-		widget.NewButtonWithIcon("Close", theme.CancelIcon(), func() {
-			vw.SetContent(vw.layout())
-		}),
 	)
 }
 

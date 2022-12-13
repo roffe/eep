@@ -30,7 +30,7 @@ type mainWindow struct {
 	rescanButton *widget.Button
 	portList     *widget.Select
 
-	viewButton     *widget.Button
+	openButton     *widget.Button
 	readButton     *widget.Button
 	writeButton    *widget.Button
 	eraseButton    *widget.Button
@@ -110,7 +110,7 @@ func newMainWindow(e *EEPGui) *mainWindow {
 		},
 	}
 
-	m.viewButton = widget.NewButtonWithIcon("View", theme.SearchIcon(), m.viewClickHandler)
+	m.openButton = widget.NewButtonWithIcon("Open", theme.FolderOpenIcon(), m.viewClickHandler)
 	m.readButton = widget.NewButtonWithIcon("Read", theme.DownloadIcon(), m.readClickHandler)
 	m.writeButton = widget.NewButtonWithIcon("Write", theme.UploadIcon(), m.writeClickHandler)
 	m.eraseButton = widget.NewButtonWithIcon("Erase", theme.DeleteIcon(), m.eraseClickHandler)
@@ -152,7 +152,7 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 		Trailing: container.NewVBox(
 			m.rescanButton,
 			m.portList,
-			m.viewButton,
+			m.openButton,
 			m.readButton,
 			m.writeButton,
 			m.eraseButton,
@@ -171,9 +171,9 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 }
 
 func (m *mainWindow) viewClickHandler() {
-	m.viewButton.Disable()
+	m.openButton.Disable()
 	go func() {
-		defer m.viewButton.Enable()
+		defer m.openButton.Enable()
 		filename, err := sdialog.File().Filter("Bin file", "bin").Title("Select file to view").Load()
 		if err != nil {
 			if err.Error() == "Cancelled" {
@@ -222,7 +222,7 @@ func (m *mainWindow) readClickHandler() {
 				return
 			}
 			if ignoreReadErrors {
-				m.saveFile("Save raw bin file", rawBytes)
+				m.saveFile("Save raw bin file", fmt.Sprintf("cim_raw_%s.bin", time.Now().Format("20060102-150405")), rawBytes)
 			} else {
 				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(ok bool) {
 					if ok {
@@ -309,8 +309,8 @@ func (m *mainWindow) eraseClickHandler() {
 	}, m)
 }
 
-func (m *mainWindow) saveFile(title string, data []byte) bool {
-	filename, err := sdialog.File().Filter("Bin file", "bin").Title(title).Save()
+func (m *mainWindow) saveFile(title, suggestedFilename string, data []byte) bool {
+	filename, err := sdialog.File().Filter("Bin file", "bin").SetStartFile(suggestedFilename).Title(title).Save()
 	if err != nil {
 		if err.Error() == "Cancelled" {
 			return false
@@ -364,7 +364,7 @@ func (m *mainWindow) output(format string, values ...interface{}) {
 func (m *mainWindow) disableButtons() {
 	m.rescanButton.Disable()
 	m.portList.Disable()
-	//m.viewButton.Disable()
+	//m.openButton.Disable()
 	m.readButton.Disable()
 	m.writeButton.Disable()
 	m.eraseButton.Disable()
@@ -374,7 +374,7 @@ func (m *mainWindow) enableButtons() {
 	m.rescanButton.Enable()
 	m.readButton.Enable()
 	m.portList.Enable()
-	//m.viewButton.Enable()
+	//m.openButton.Enable()
 	m.readButton.Enable()
 	m.writeButton.Enable()
 	m.eraseButton.Enable()
