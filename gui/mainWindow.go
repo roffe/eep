@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
+	"github.com/hirschmann-koxha-gbr/eep/adapter"
 	sdialog "github.com/sqweek/dialog"
 )
 
@@ -64,8 +65,7 @@ func newMainWindow(e *EEPGui) *mainWindow {
 						m.aw.RequestFocus()
 						return
 					}
-					m.aw = newAboutWindow(e)
-					m.aw.Show()
+					e.showAboutDialog()
 				},
 			},
 			fyne.NewMenuItemSeparator(),
@@ -98,12 +98,28 @@ func newMainWindow(e *EEPGui) *mainWindow {
 		},
 	)
 
-	m.rescanButton = widget.NewButtonWithIcon("Rescan ports", theme.ViewRefreshIcon(), func() { m.portList.Options = m.listPorts() })
+	message, ports, err := adapter.ListPorts()
+	if err != nil {
+		m.output(err.Error())
+	}
+	if message != "" {
+		m.output(message)
+	}
+
+	m.rescanButton = widget.NewButtonWithIcon("Refresh ports", theme.ViewRefreshIcon(), func() {
+		message, ports, err := adapter.ListPorts()
+		if err != nil {
+			m.output(err.Error())
+			return
+		}
+		m.portList.Options = ports
+		m.output(message)
+	})
 
 	m.portList = &widget.Select{
 		PlaceHolder: m.e.port,
 		Alignment:   fyne.TextAlignCenter,
-		Options:     m.listPorts(),
+		Options:     ports,
 		OnChanged: func(s string) {
 			m.e.port = s
 			m.e.Preferences().SetString("port", s)
@@ -146,12 +162,14 @@ func newMainWindow(e *EEPGui) *mainWindow {
 
 func (m *mainWindow) layout() fyne.CanvasObject {
 	split := &container.Split{
-		Offset:     0.85,
+		Offset:     0.90,
 		Horizontal: true,
 		Leading:    container.NewVScroll(m.log),
 		Trailing: container.NewVBox(
+
 			m.rescanButton,
 			m.portList,
+
 			m.openButton,
 			m.readButton,
 			m.writeButton,
@@ -232,7 +250,6 @@ func (m *mainWindow) readClickHandler() {
 			}
 			return
 		}
-
 		xorBytes, err := bin.XORBytes()
 		if err != nil {
 			dialog.ShowError(err, m)
@@ -264,10 +281,10 @@ func (m *mainWindow) writeClickHandler() {
 			go func() {
 				m.disableButtons()
 				defer m.enableButtons()
-				if ok := m.writeCIM(m.e.port, bin); !ok {
+				if err := m.writeCIM(m.e.port, bin); err != nil {
+					dialog.ShowError(err, m)
 					return
 				}
-				//m.output("Flashed %s, took %s", filename, time.Since(start).String())
 				dialog.ShowInformation("Write done", fmt.Sprintf("Flashed %s, took %s", filename, time.Since(start).Round(time.Millisecond).String()), m)
 			}()
 
@@ -280,26 +297,25 @@ func (m *mainWindow) eraseClickHandler() {
 		m.output("Please select a port first")
 		return
 	}
-
 	dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(b bool) {
 		if b {
 			go func() {
 				m.disableButtons()
 				defer m.enableButtons()
-				start := time.Now()
-				sr, err := m.openPort(m.e.port)
-				if sr != nil {
-					defer sr.Close()
-				}
 
-				if err != nil {
+				start := time.Now()
+
+				client := m.newAdapter()
+				if err := client.Open(m.e.port, VERSION); err != nil {
 					m.output("Failed to init adapter: %v", err)
 					return
 				}
+				defer client.Close()
 
 				m.output("Erasing ... ")
-				if err := m.erase(sr); err != nil {
+				if err := client.EraseCIM(); err != nil {
 					m.output(err.Error())
+					return
 				}
 
 				m.output("Erase took %s", time.Since(start).String())

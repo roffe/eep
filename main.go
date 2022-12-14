@@ -21,7 +21,11 @@ func main() {
 	application := app.NewWithID("com.cimtool")
 	application.SetIcon(appIcon)
 	application.Settings().SetTheme(&gui.Theme{})
-	ui := gui.New(application)
+
+	ui, err := gui.New(application)
+	if err != nil {
+		log.Fatal(err)
+	}
 	application.Lifecycle().SetOnStarted(ui.CheckUpdate)
 	application.Run()
 }

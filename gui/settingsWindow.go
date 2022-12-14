@@ -17,6 +17,7 @@ type settingsWindow struct {
 	e                *EEPGui
 	hwVerSelect      *widget.Select
 	ignoreError      *widget.Check
+	verifyWrite      *widget.Check
 	readSliderLabel  *widget.Label
 	readSlider       *widget.Slider
 	writeSliderLabel *widget.Label
@@ -40,6 +41,7 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 			e.Preferences().SetString("hardware_version", s)
 		}),
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.ignoreError),
+		verifyWrite:      widget.NewCheckWithData("Verify written data", e.verifyWrite),
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(0, 255, e.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
@@ -62,6 +64,12 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 
 	sw.ignoreError.OnChanged = func(b bool) {
 		sw.e.Preferences().SetBool("ignore_read_errors", b)
+		sw.e.ignoreError.Set(b)
+	}
+
+	sw.verifyWrite.OnChanged = func(b bool) {
+		sw.e.Preferences().SetBool("verify_write", b)
+		sw.e.verifyWrite.Set(b)
 	}
 
 	sw.readSlider.OnChanged = func(f float64) {
@@ -117,6 +125,7 @@ func (sw *settingsWindow) layout() fyne.CanvasObject {
 		},
 		container.NewHBox(widget.NewLabel("Arduino"), sw.hwVerSelect),
 		sw.ignoreError,
+		sw.verifyWrite,
 		sw.readSliderLabel,
 		sw.readSlider,
 		sw.writeSliderLabel,

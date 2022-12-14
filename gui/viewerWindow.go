@@ -36,7 +36,7 @@ type viewerWindow struct {
 	fyne.Window
 }
 
-var viewWindowSize = fyne.NewSize(550, 310)
+var viewWindowSize = fyne.NewSize(550, 320)
 
 func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose bool) {
 	vw := &viewerWindow{
@@ -92,7 +92,10 @@ func kv(w fyne.Window, k, valueFormat string, values ...interface{}) *fyne.Conta
 	return container.NewHBox(
 		//widget.NewLabelWithStyle(k+":", fyne.TextAlignLeading, fyne.TextStyle{Bold: true, Monospace: true}),
 		newBoldEntry(k+":"),
-		widget.NewLabelWithStyle(fmt.Sprintf(valueFormat, values...), fyne.TextAlignLeading, fyne.TextStyle{}),
+		&widget.Label{
+			Text:     fmt.Sprintf(valueFormat, values...),
+			Wrapping: fyne.TextWrapOff,
+		},
 		layout.NewSpacer(),
 		widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 			w.Clipboard().SetContent(fmt.Sprintf(valueFormat, values...))
@@ -128,21 +131,14 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 				go func() {
 					vw.e.mw.disableButtons()
 					defer vw.e.mw.enableButtons()
-					if ok := vw.e.mw.writeCIM(vw.e.port, bin); !ok {
+					if err := vw.e.mw.writeCIM(vw.e.port, bin); err != nil {
+						dialog.ShowError(err, vw)
 						return
 					}
 					dialog.ShowInformation("Write done", fmt.Sprintf("Write completed in %s", time.Since(start).Round(time.Millisecond).String()), vw)
 				}()
 			}
 		}, vw)
-	})
-
-	resetAction := widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
-		vw.cimBin.Unmarry()
-		vw.SetContent(vw.layout())
-		dialog.ShowInformation("Virginization complete", "The file has been virginized.\nNow flash the CIM and re-assemble the car and program new key(s) using Tech2", vw)
-		vw.askSaveOnClose = true
-		vw.saved = false
 	})
 
 	hexAction := widget.NewToolbarAction(theme.SearchIcon(), func() {
@@ -175,7 +171,7 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 
 	if vw.cimBin != nil {
 		toolbar.Append(writeAction)
-		toolbar.Append(resetAction)
+		//toolbar.Append(resetAction)
 		toolbar.Append(hexAction)
 	}
 	toolbar.Append(widget.NewToolbarSpacer())
@@ -269,12 +265,19 @@ func hexValidator(length int) func(s string) error {
 }
 
 func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
+	vButton := widget.NewButtonWithIcon("Virginize", theme.SearchReplaceIcon(), func() {
+		vw.cimBin.Unmarry()
+		vw.SetContent(vw.layout())
+		dialog.ShowInformation("Virginization complete", "The file has been virginized.\nNow flash the eeprom, re-assemble the car and add the CIM with Tech2", vw)
+		vw.askSaveOnClose = true
+		vw.saved = false
+	})
+
 	iskEntry := &widget.Entry{
-		Text:        fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
-		Wrapping:    fyne.TextWrapOff,
-		PlaceHolder: strings.Repeat(" ", 12),
-		TextStyle:   fyne.TextStyle{Monospace: true},
-		Validator:   hexValidator(12),
+		Text:      fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
+		Wrapping:  fyne.TextWrapOff,
+		TextStyle: fyne.TextStyle{Monospace: true},
+		Validator: hexValidator(12),
 	}
 	iskEntry.OnChanged = func(s string) {
 		if len(s) > 12 {
@@ -293,11 +296,10 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 	}
 
 	pskEntry := &widget.Entry{
-		Text:        fmt.Sprintf("%X%X", vw.cimBin.PSK.Low, vw.cimBin.PSK.High),
-		Wrapping:    fyne.TextWrapOff,
-		TextStyle:   fyne.TextStyle{Monospace: true},
-		PlaceHolder: strings.Repeat(" ", 12),
-		Validator:   hexValidator(12),
+		Text:      fmt.Sprintf("%X%X", vw.cimBin.PSK.Low, vw.cimBin.PSK.High),
+		Wrapping:  fyne.TextWrapOff,
+		TextStyle: fyne.TextStyle{Monospace: true},
+		Validator: hexValidator(12),
 	}
 	pskEntry.OnChanged = func(s string) {
 		if len(s) > 12 {
@@ -340,7 +342,14 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 		pin = "not set"
 	}
 
-	return container.NewVBox(
+	vin := func() string {
+		if vw.cimBin.Vin.Data == strings.Repeat(" ", 17) {
+			return "not set"
+		}
+		return vw.cimBin.Vin.Data
+	}()
+
+	left := container.NewVBox(
 		kv(vw, "MD5  ", "%s", vw.cimBin.MD5()),
 		kv(vw, "CRC32", "%s", vw.cimBin.CRC32()),
 		kv(vw, "Size ", "%d", len(vw.data)),
@@ -350,7 +359,7 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 		container.NewHBox(
 			container.NewHBox(
 				newBoldEntry("VIN  :"),
-				widget.NewLabelWithStyle(vw.cimBin.Vin.Data, fyne.TextAlignLeading, fyne.TextStyle{}),
+				widget.NewLabelWithStyle(vin, fyne.TextAlignLeading, fyne.TextStyle{}),
 			),
 			container.NewHBox(
 				widget.NewLabelWithStyle("MY:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -384,10 +393,19 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 			container.NewBorder(nil, nil, nil, nil, pskEntry),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				vw.e.mw.Clipboard().SetContent(iskEntry.Text)
+				vw.Clipboard().SetContent(iskEntry.Text)
 			}),
 		),
 		layout.NewSpacer(),
+		vButton,
 	)
+
+	//right := container.NewVBox(
+	//
+	//	layout.NewSpacer(),
+	//)
+
+	// return container.NewGridWithColumns(2, left, right)
+	return left
 
 }
