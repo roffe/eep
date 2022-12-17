@@ -43,5 +43,6 @@ func (aw *aboutWindow) layout() fyne.CanvasObject {
 			Text:      "Hirschmann & Koxha GbR",
 			Alignment: fyne.TextAlignCenter,
 		},
+		&widget.Label{Text: ""},
 	)
 }

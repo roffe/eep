@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -68,7 +67,7 @@ func (vw *viewerWindow) save() {
 			return
 		}
 		vw.e.mw.saveFile("Save bin file",
-			fmt.Sprintf("cim_%d_%s.bin", vw.cimBin.SnSticker, time.Now().Format("20060102-150405")),
+			fmt.Sprintf("cim_%x_%s.bin", vw.cimBin.SnSticker, time.Now().Format("20060102-150405")),
 			bin)
 		return
 	}
@@ -111,7 +110,7 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 				dialog.ShowError(err, vw)
 				return
 			}
-			vw.e.mw.saveFile("Save bin file", fmt.Sprintf("cim_%d_%s.bin", vw.cimBin.SnSticker, time.Now().Format("20060102-15_04_05")), bin)
+			vw.e.mw.saveFile("Save bin file", fmt.Sprintf("cim_%x_%s.bin", vw.cimBin.SnSticker, time.Now().Format("20060102-15_04_05")), bin)
 			vw.saved = true
 			return
 		}
@@ -135,7 +134,7 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 						dialog.ShowError(err, vw)
 						return
 					}
-					dialog.ShowInformation("Write done", fmt.Sprintf("Write completed in %s", time.Since(start).Round(time.Millisecond).String()), vw)
+					dialog.ShowInformation("Write done", fmt.Sprintf("Write successfull, took %s", time.Since(start).Round(time.Millisecond).String()), vw)
 				}()
 			}
 		}, vw)
@@ -265,6 +264,7 @@ func hexValidator(length int) func(s string) error {
 }
 
 func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
+
 	vButton := widget.NewButtonWithIcon("Virginize", theme.SearchReplaceIcon(), func() {
 		vw.cimBin.Unmarry()
 		vw.SetContent(vw.layout())
@@ -274,9 +274,9 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 	})
 
 	iskEntry := &widget.Entry{
-		Text:      fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
-		Wrapping:  fyne.TextWrapOff,
-		TextStyle: fyne.TextStyle{Monospace: true},
+		Text:     fmt.Sprintf("%X%X", vw.cimBin.Keys.IskHI1, vw.cimBin.Keys.IskLO1),
+		Wrapping: fyne.TextWrapOff,
+		//TextStyle: fyne.TextStyle{Monospace: true},
 		Validator: hexValidator(12),
 	}
 	iskEntry.OnChanged = func(s string) {
@@ -296,9 +296,9 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 	}
 
 	pskEntry := &widget.Entry{
-		Text:      fmt.Sprintf("%X%X", vw.cimBin.PSK.Low, vw.cimBin.PSK.High),
-		Wrapping:  fyne.TextWrapOff,
-		TextStyle: fyne.TextStyle{Monospace: true},
+		Text:     fmt.Sprintf("%X%X", vw.cimBin.PSK.High, vw.cimBin.PSK.Low),
+		Wrapping: fyne.TextWrapOff,
+		//TextStyle: fyne.TextStyle{Monospace: true},
 		Validator: hexValidator(12),
 	}
 	pskEntry.OnChanged = func(s string) {
@@ -313,14 +313,54 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 				return
 			}
 
-			if err := vw.cimBin.PSK.SetLow(decoded[:4]); err != nil {
+			if err := vw.cimBin.PSK.SetHigh(decoded[:4]); err != nil {
 				dialog.ShowError(err, vw)
 				return
 			}
-			if err := vw.cimBin.PSK.SetHigh(decoded[4:6]); err != nil {
+			if err := vw.cimBin.PSK.SetLow(decoded[4:6]); err != nil {
 				dialog.ShowError(err, vw)
 				return
 			}
+		}
+	}
+
+	vinEntry := &widget.Entry{
+		Text: vw.cimBin.Vin.Data,
+	}
+	vinEntry.OnChanged = func(s string) {
+		if len(s) > 17 {
+			vinEntry.SetText(s[:17])
+		}
+		if len(s) == 17 {
+			vw.cimBin.Vin.Data = s
+			if err := vw.cimBin.Vin.Set(s); err != nil {
+				dialog.ShowError(err, vw)
+			}
+		}
+	}
+
+	pin := string(vw.cimBin.Pin.Data1[:])
+	if bytes.Equal(vw.cimBin.Pin.Data1, []byte{0xFF, 0xFF, 0xFF, 0xFF}) {
+		pin = "not set"
+	}
+
+	pinEntry := &widget.Entry{
+		Text: pin,
+	}
+
+	pinHex := &widget.Label{
+		Text: fmt.Sprintf("%X", vw.cimBin.Pin.Data1),
+	}
+
+	pinEntry.OnChanged = func(s string) {
+		if len(s) > 4 {
+			pinEntry.SetText(s[:4])
+		}
+		if len(s) == 4 {
+			if err := vw.cimBin.SetPin(fmt.Sprintf("%X", s)); err != nil {
+				dialog.ShowError(err, vw)
+			}
+			pinHex.SetText(fmt.Sprintf("%X", vw.cimBin.Pin.Data1))
 		}
 	}
 
@@ -337,29 +377,80 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 		}(),
 	}
 
-	pin := string(vw.cimBin.Pin.Data1[:])
-	if bytes.Equal(vw.cimBin.Pin.Data1, []byte{0xFF, 0xFF, 0xFF, 0xFF}) {
-		pin = "not set"
-	}
+	/*
+		left := container.NewVBox(
+			kv(vw, "MD5  ", "%s", vw.cimBin.MD5()),
+			kv(vw, "CRC32", "%s", vw.cimBin.CRC32()),
+			kv(vw, "Size ", "%d", len(vw.data)),
 
-	vin := func() string {
-		if vw.cimBin.Vin.Data == strings.Repeat(" ", 17) {
-			return "not set"
-		}
-		return vw.cimBin.Vin.Data
-	}()
+			layout.NewSpacer(),
 
-	left := container.NewVBox(
-		kv(vw, "MD5  ", "%s", vw.cimBin.MD5()),
-		kv(vw, "CRC32", "%s", vw.cimBin.CRC32()),
-		kv(vw, "Size ", "%d", len(vw.data)),
-
-		layout.NewSpacer(),
-
-		container.NewHBox(
 			container.NewHBox(
-				newBoldEntry("VIN  :"),
-				widget.NewLabelWithStyle(vin, fyne.TextAlignLeading, fyne.TextStyle{}),
+				container.NewHBox(
+					newBoldEntry("VIN  :"),
+					//widget.NewLabelWithStyle(vinEntry.Text, fyne.TextAlignLeading, fyne.TextStyle{}),
+					container.NewBorder(nil, nil, nil, nil, vinEntry),
+				),
+				container.NewHBox(
+					widget.NewLabelWithStyle("MY:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+					widget.NewLabelWithStyle(vw.cimBin.ModelYear(), fyne.TextAlignLeading, fyne.TextStyle{}),
+				),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+					vw.e.mw.Clipboard().SetContent(vw.cimBin.Vin.Data)
+				}),
+			),
+
+			kv(vw, "PIN  ", "%s", pin),
+			kv(vw, "PIN (hex)", "%X", vw.cimBin.Pin.Data1),
+
+			layout.NewSpacer(),
+
+			container.NewHBox(
+				newBoldEntry("SAS  :"),
+				sasSelect,
+			),
+			container.NewHBox(
+				newBoldEntry("ISK  :"),
+				container.NewBorder(nil, nil, nil, nil, iskEntry),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+					vw.e.mw.Clipboard().SetContent(iskEntry.Text)
+				}),
+			),
+			container.NewHBox(
+				newBoldEntry("PSK  :"),
+				container.NewBorder(nil, nil, nil, nil, pskEntry),
+				layout.NewSpacer(),
+				widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+					vw.Clipboard().SetContent(iskEntry.Text)
+				}),
+			),
+			layout.NewSpacer(),
+			vButton,
+		)
+	*/
+	form := widget.NewForm(
+
+		widget.NewFormItem("MD5", container.NewHBox(
+			widget.NewLabel(vw.cimBin.MD5()),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				vw.Clipboard().SetContent(vw.cimBin.MD5())
+			}),
+		)),
+		widget.NewFormItem("CRC32", container.NewHBox(
+			widget.NewLabel(vw.cimBin.CRC32()),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				vw.Clipboard().SetContent(vw.cimBin.CRC32())
+			}),
+		)),
+		widget.NewFormItem("Size", widget.NewLabel(fmt.Sprintf("%d", len(vw.data)))),
+
+		widget.NewFormItem("VIN", container.NewHBox(
+			container.NewHBox(
+				vinEntry,
 			),
 			container.NewHBox(
 				widget.NewLabelWithStyle("MY:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -367,37 +458,41 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 			),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				vw.e.mw.Clipboard().SetContent(vw.cimBin.Vin.Data)
+				vw.e.mw.Clipboard().SetContent(vinEntry.Text)
 			}),
-		),
+		)),
 
-		kv(vw, "PIN  ", "%s", pin),
-		kv(vw, "PIN (hex)", "%X", vw.cimBin.Pin.Data1),
+		widget.NewFormItem("PIN", container.NewHBox(
+			pinEntry,
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				vw.e.mw.Clipboard().SetContent(pinEntry.Text)
+			}),
+		)),
 
-		layout.NewSpacer(),
+		widget.NewFormItem("PIN (hex)", container.NewHBox(
+			pinHex,
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+				vw.e.mw.Clipboard().SetContent(fmt.Sprintf("%X", pinHex.Text))
+			}),
+		)),
 
-		container.NewHBox(
-			newBoldEntry("SAS  :"),
-			sasSelect,
-		),
-		container.NewHBox(
-			newBoldEntry("ISK  :"),
-			container.NewBorder(nil, nil, nil, nil, iskEntry),
+		widget.NewFormItem("SAS", sasSelect),
+		widget.NewFormItem("ISK", container.NewHBox(
+			iskEntry,
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 				vw.e.mw.Clipboard().SetContent(iskEntry.Text)
 			}),
-		),
-		container.NewHBox(
-			newBoldEntry("PSK  :"),
-			container.NewBorder(nil, nil, nil, nil, pskEntry),
+		)),
+		widget.NewFormItem("PSK", container.NewHBox(
+			pskEntry,
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 				vw.Clipboard().SetContent(iskEntry.Text)
 			}),
-		),
-		layout.NewSpacer(),
-		vButton,
+		)),
 	)
 
 	//right := container.NewVBox(
@@ -406,6 +501,6 @@ func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 	//)
 
 	// return container.NewGridWithColumns(2, left, right)
-	return left
+	return container.NewBorder(nil, vButton, nil, nil, form)
 
 }

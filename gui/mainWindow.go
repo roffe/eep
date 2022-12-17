@@ -166,10 +166,8 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 		Horizontal: true,
 		Leading:    container.NewVScroll(m.log),
 		Trailing: container.NewVBox(
-
 			m.rescanButton,
 			m.portList,
-
 			m.openButton,
 			m.readButton,
 			m.writeButton,
@@ -181,11 +179,14 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.settingsButton,
 		),
 	}
-	return &container.Split{
-		Offset:   1,
-		Leading:  split,
-		Trailing: m.progressBar,
-	}
+
+	return container.NewBorder(
+		nil,
+		m.progressBar,
+		nil,
+		nil,
+		split,
+	)
 }
 
 func (m *mainWindow) viewClickHandler() {
@@ -233,7 +234,7 @@ func (m *mainWindow) readClickHandler() {
 			return
 		}
 		ignoreReadErrors, _ := m.e.ignoreError.Get()
-		rawBytes, bin, err := m.readCIM(m.e.port, 1)
+		rawBytes, bin, err := m.readCIM()
 		if err != nil {
 			m.output(err.Error())
 			if err.Error() == "Timeout reading eeprom" {
@@ -266,7 +267,7 @@ func (m *mainWindow) writeClickHandler() {
 		return
 	}
 
-	filename, bin, err := loadFile()
+	_, bin, err := loadFile()
 	if err != nil {
 		if err.Error() == "Cancelled" {
 			return
@@ -285,7 +286,7 @@ func (m *mainWindow) writeClickHandler() {
 					dialog.ShowError(err, m)
 					return
 				}
-				dialog.ShowInformation("Write done", fmt.Sprintf("Flashed %s, took %s", filename, time.Since(start).Round(time.Millisecond).String()), m)
+				dialog.ShowInformation("Write done", fmt.Sprintf("Write successfull, took %s", time.Since(start).Round(time.Millisecond).String()), m)
 			}()
 
 		}
@@ -297,8 +298,8 @@ func (m *mainWindow) eraseClickHandler() {
 		m.output("Please select a port first")
 		return
 	}
-	dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(b bool) {
-		if b {
+	dialog.ShowConfirm("Erase CIM?", "Continue erasing CIM?", func(ok bool) {
+		if ok {
 			go func() {
 				m.disableButtons()
 				defer m.enableButtons()

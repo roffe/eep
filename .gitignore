@@ -12,4 +12,6 @@ dist
 
 *.exe
 *.zip
+*.bak
+
 build/

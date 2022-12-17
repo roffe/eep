@@ -15,7 +15,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-var speeds = []int{57600, 1000000, 57600}
+var speeds = []int{57600, 1000000, 115200}
 
 type Client struct {
 	port serial.Port
@@ -84,16 +84,16 @@ func ListPorts() (string, []string, error) {
 
 	output.WriteString("detected ports:\n")
 	for i, port := range ports {
-		pref := " "
+		prefix := " "
 		jun := "┗"
 		if len(ports) > 1 && i+1 < len(ports) {
-			pref = "┃"
+			prefix = "┃"
 			jun = "┣"
 		}
 		output.WriteString(fmt.Sprintf("  %s %s\n", jun, port.Name))
 		if port.IsUSB {
-			output.WriteString(fmt.Sprintf("  %s  ┣ USB ID: %s:%s\n", pref, port.VID, port.PID))
-			output.WriteString(fmt.Sprintf("  %s  ┗ USB serial: %s\n", pref, port.SerialNumber))
+			output.WriteString(fmt.Sprintf("  %s  ┣ USB ID: %s:%s\n", prefix, port.VID, port.PID))
+			output.WriteString(fmt.Sprintf("  %s  ┗ USB serial: %s\n", prefix, port.SerialNumber))
 			portsList = append(portsList, port.Name)
 		}
 	}
@@ -143,11 +143,11 @@ func (c *Client) openPort(port, versionString string) error {
 		return nil
 	},
 		retry.OnRetry(func(n uint, err error) {
-			c.onMessage(fmt.Sprintf("trying %dkbp/s", speeds[n]/1000))
+			c.onMessage(fmt.Sprintf("Trying %dkbp/s", speeds[n]/1000))
 			mode.BaudRate = speeds[n]
 		}),
 		retry.Attempts(3),
-		retry.Delay(200*time.Millisecond),
+		retry.Delay(400*time.Millisecond),
 		retry.LastErrorOnly(true),
 	)
 	if err != nil {
@@ -166,7 +166,7 @@ func getVersion(stream serial.Port) (string, error) {
 			return "", err
 		}
 		if time.Since(start) > 3*time.Second {
-			return "", errors.New("got no response from adapter")
+			return "", errors.New("Got no response from adapter") //lint:ignore ST1005 ignore this
 		}
 		if n == 0 {
 			continue
@@ -242,10 +242,9 @@ func (c *Client) ReadCIM() ([]byte, error) {
 }
 
 func (c *Client) EraseCIM() error {
-	if err := c.port.ResetInputBuffer(); err != nil {
-		return err
-	}
-	if err := c.sendCMD(opErase, 66, 1, 8, c.wdelay); err != nil {
+	c.port.ResetInputBuffer()
+	c.port.ResetOutputBuffer()
+	if err := c.sendCMD(opErase, 66, 512, 8, c.wdelay); err != nil {
 		return err
 	}
 	if err := c.waitAck('\a', 2*time.Second); err != nil {
@@ -260,7 +259,7 @@ func (c *Client) WriteCIM(data []byte) error {
 	if err := c.sendCMD(opWrite, 66, 512, 8, c.wdelay); err != nil {
 		return err
 	}
-	if err := c.waitAck('\f', 3*time.Second); err != nil {
+	if err := c.waitAck('\f', 2*time.Second); err != nil {
 		return err
 	}
 
@@ -274,7 +273,7 @@ func (c *Client) WriteCIM(data []byte) error {
 		for !done {
 			n, err := c.port.Read(buff)
 			if err != nil {
-				log.Println(err)
+				c.onError(fmt.Errorf("Failed to read from port: %w", err)) //lint:ignore ST1005 ignore this
 				return
 			}
 			if done {
@@ -287,18 +286,20 @@ func (c *Client) WriteCIM(data []byte) error {
 				select {
 				case <-sendLock:
 				default:
-					c.onError(errors.New("unexpected ack"))
+					c.onError(
+						errors.New("Got a unexpected ack"), //lint:ignore ST1005 ignore this
+					)
 				}
 			}
-
 		}
 	}()
 
 	r := bytes.NewReader(data)
 	buffSize := 16
 	buff := make([]byte, buffSize)
-	rr := 0
-	for {
+	rb := 0
+	for i := 0; i < 32; i++ {
+
 		n, err := r.Read(buff)
 		if err != nil {
 			if err == io.EOF {
@@ -307,11 +308,16 @@ func (c *Client) WriteCIM(data []byte) error {
 			return err
 		}
 		if n != buffSize {
-			return errors.New("invalid size on read") // this should never happen
+			return errors.New("Invalid size on read") //lint:ignore ST1005 ignore this this should never happen
 		}
-		rr += n
-		c.onProgress(float64(rr))
-		sendLock <- struct{}{}
+		rb += n
+		c.onProgress(float64(rb))
+		select {
+		case sendLock <- struct{}{}:
+		case <-time.After(3 * time.Second):
+			c.onError(errors.New("timeout in sendmutex"))
+
+		}
 		if _, err := c.port.Write(buff[:n]); err != nil {
 			return err
 		}
@@ -332,7 +338,7 @@ func (c *Client) waitAck(char byte, timeout time.Duration) error {
 			return err
 		}
 		if time.Since(start) > timeout {
-			return errors.New("got no response from adapter")
+			return errors.New("Got no response from adapter") //lint:ignore ST1005 ignore this
 		}
 		if n == 0 {
 			continue

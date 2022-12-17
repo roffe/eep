@@ -6,18 +6,13 @@ import (
 	"bytes"
 	_ "embed"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 )
 
 //go:embed firmware.hex
 var firmwareHex []byte
-
-//go:embed avrdude.conf
-var avrdudeConf []byte
-
-//go:embed avrdude_.zip
-var avrdudeZip []byte
 
 func Update(port, board string, cb func(format string, values ...interface{})) ([]byte, error) {
 	var portSpeed string
@@ -32,20 +27,13 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 		portSpeed = "115200"
 	}
 
-	if err := os.WriteFile("avrdude.conf", avrdudeConf, 0644); err != nil {
-		return nil, err
-	}
-	defer os.Remove("avrdude.conf")
-
-	b, err := getAvrdudeBytes()
-	if err != nil {
+	cb("%s", "Downloading avrdude ...")
+	if err := getAvrdudeBytes(); err != nil {
 		return nil, err
 	}
 
-	if err := os.WriteFile("avrdude.exe", b, 0755); err != nil {
-		return nil, err
-	}
 	defer os.Remove("avrdude.exe")
+	defer os.Remove("avrdude.conf")
 
 	if err := os.WriteFile("firmware.hex", firmwareHex, 0644); err != nil {
 		return nil, err
@@ -108,25 +96,47 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 	return nil, nil
 }
 
-func getAvrdudeBytes() ([]byte, error) {
-	data := make([]byte, len(avrdudeZip))
-	for i, bb := range avrdudeZip {
-		data[i] = bb ^ 0x69
+func getAvrdudeBytes() error {
+	resp, err := http.Get("https://github.com/mariusgreuel/avrdude/releases/download/v7.0-windows/avrdude-v7.0-windows-windows-x64.zip")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
 	}
 
-	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(avrdudeZip)))
+	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	zf, err := zipReader.Open("avrdude.exe")
+
+	fname := []string{"avrdude.exe", "avrdude.conf"}
+
+	for _, file := range fname {
+		if err := unzip(zipReader, file); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func unzip(zipReader *zip.Reader, file string) error {
+	zf, err := zipReader.Open(file)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer zf.Close()
 
 	b, err := io.ReadAll(zf)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return b, nil
+	if err := os.WriteFile(file, b, 0755); err != nil {
+		return err
+	}
+	return nil
 }

@@ -83,7 +83,7 @@ func (Theme) Size(s fyne.ThemeSizeName) float32 {
 	case theme.SizeNameSeparatorThickness:
 		return 0
 	case theme.SizeNameText:
-		return 12
+		return 14
 	case theme.SizeNameInputBorder:
 		return 2
 	case theme.SizeNameInnerPadding:

@@ -33,29 +33,30 @@ func (m *mainWindow) newAdapter() *adapter.Client {
 func (m *mainWindow) writeCIM(port string, data []byte) error {
 	input, err := cim.MustLoadBytes("read.bin", data)
 	if err != nil {
-		return fmt.Errorf("Failed to load CIM: %v", err) //lint:ignore ST1005 ignore
+		return fmt.Errorf("Failed to load CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 
 	client := m.newAdapter()
 	if err := client.Open(m.e.port, VERSION); err != nil {
-		return fmt.Errorf("Failed to init adapter: %v", err) //lint:ignore ST1005 ignore
+		return fmt.Errorf("Failed to init adapter: %w", err) //lint:ignore ST1005 ignore
 	}
 	defer client.Close()
 
-	m.progressBar.Max = 512
+	m.progressBar.Max = float64(len(data))
 
 	if err := client.WriteCIM(data); err != nil {
-		return fmt.Errorf("Failed to write CIM: %v", err) //lint:ignore ST1005 ignore
+		return fmt.Errorf("Failed to write CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 
 	if verify, err := m.e.verifyWrite.Get(); verify && err == nil {
+		time.Sleep(200 * time.Millisecond)
 		rawBytes, err := client.ReadCIM()
 		if err != nil {
-			return fmt.Errorf("Failed to read CIM: %v", err) //lint:ignore ST1005 ignore
+			return fmt.Errorf("Failed to read CIM: %w", err) //lint:ignore ST1005 ignore
 		}
 		readback, err := cim.MustLoadBytes("read.bin", rawBytes)
 		if err != nil {
-			return fmt.Errorf("Failed to load CIM: %v", err) //lint:ignore ST1005 ignore
+			return fmt.Errorf("Failed to load CIM: %w", err) //lint:ignore ST1005 ignore
 		}
 
 		if input.MD5() == readback.MD5() && input.CRC32() == readback.CRC32() {
@@ -67,29 +68,29 @@ func (m *mainWindow) writeCIM(port string, data []byte) error {
 	return nil
 }
 
-func (m *mainWindow) readCIM(port string, count int) ([]byte, *cim.Bin, error) {
+func (m *mainWindow) readCIM() ([]byte, *cim.Bin, error) {
 	client := m.newAdapter()
 	if err := client.Open(m.e.port, VERSION); err != nil {
 		return nil, nil, fmt.Errorf("Failed to init adapter: %v", err) //lint:ignore ST1005 ignore
 	}
 	defer client.Close()
 
-	m.progressBar.Max = 512 * float64(count)
+	m.progressBar.Max = 512
 
 	start := time.Now()
 	m.output("Reading CIM ...")
 
 	rawBytes, err := client.ReadCIM()
 	if err != nil {
-		return rawBytes, nil, err
+		return rawBytes, nil, fmt.Errorf("Failed to read CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 	defer m.output("Read took %s", time.Since(start).String())
 	bin, err := cim.LoadBytes("read.bin", rawBytes)
 	if err != nil {
-		return rawBytes, nil, err
+		return rawBytes, nil, fmt.Errorf("Failed to load CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 	if err := bin.Validate(); err != nil {
-		return rawBytes, nil, err
+		return rawBytes, nil, fmt.Errorf("Failed to validate CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 	return rawBytes, bin, nil
 }
