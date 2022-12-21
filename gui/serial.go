@@ -36,15 +36,20 @@ func (m *mainWindow) writeCIM(port string, data []byte) error {
 		return fmt.Errorf("Failed to load CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 
+	xorBytes, err := input.XORBytes()
+	if err != nil {
+		return fmt.Errorf("Failed to XOR CIM: %w", err) //lint:ignore ST1005 ignore
+	}
+
 	client := m.newAdapter()
 	if err := client.Open(m.e.port, VERSION); err != nil {
 		return fmt.Errorf("Failed to init adapter: %w", err) //lint:ignore ST1005 ignore
 	}
 	defer client.Close()
 
-	m.progressBar.Max = float64(len(data))
+	m.progressBar.Max = float64(len(xorBytes))
 
-	if err := client.WriteCIM(data); err != nil {
+	if err := client.WriteCIM(xorBytes); err != nil {
 		return fmt.Errorf("Failed to write CIM: %w", err) //lint:ignore ST1005 ignore
 	}
 

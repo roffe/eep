@@ -1,7 +1,7 @@
 {
     "sketch": "firmware.ino",
     "board": "arduino:avr:uno",
-    "port": "COM3",
+    "port": "COM10",
     "output": "./build",
     "programmer": "arduino:avrisp"
 }
