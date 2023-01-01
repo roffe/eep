@@ -13,5 +13,5 @@ var EepromBytes []byte
 //go:embed overview.jpg
 var OverviewBytes []byte
 
-//go:embed hk_white.png
+//go:embed hk.png
 var HkBytes []byte

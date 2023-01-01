@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,8 +23,9 @@ import (
 type mainWindow struct {
 	e *EEPGui
 
-	hw fyne.Window
-	aw fyne.Window
+	hw      fyne.Window
+	appTabs *container.AppTabs
+	docTab  *container.DocTabs
 
 	logList binding.StringList
 	log     *widget.List
@@ -55,30 +57,23 @@ func newMainWindow(e *EEPGui) *mainWindow {
 		progressBar: widget.NewProgressBar(),
 	}
 
-	m.SetMainMenu(fyne.NewMainMenu(
-		fyne.NewMenu("File",
-			&fyne.MenuItem{
-				Icon:  theme.HelpIcon(),
-				Label: "About",
-				Action: func() {
-					if m.aw != nil {
-						m.aw.RequestFocus()
-						return
-					}
-					e.showAboutDialog()
-				},
-			},
-			fyne.NewMenuItemSeparator(),
-			&fyne.MenuItem{
-				Icon:  theme.CancelIcon(),
-				Label: "Quit",
-				Action: func() {
-					e.Quit()
-				},
-			},
-		),
-	))
+	m.docTab = container.NewDocTabs()
+	m.docTab.CloseIntercept = func(i *container.TabItem) {
+		if i.Text == "Start" {
+			return
+		}
+		dialog.ShowConfirm("Close", "Are you sure you want to close this tab?", func(b bool) {
+			if b {
+				m.docTab.Remove(i)
+			}
+		}, m.Window)
+	}
 
+	m.docTab.Append(
+		container.NewTabItemWithIcon("Start", theme.DocumentIcon(), container.NewCenter(
+			widget.NewLabelWithStyle("Welcome to the Saab CIM Tool", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		)),
+	)
 	m.log = widget.NewListWithData(
 		m.logList,
 		func() fyne.CanvasObject {
@@ -161,10 +156,21 @@ func newMainWindow(e *EEPGui) *mainWindow {
 }
 
 func (m *mainWindow) layout() fyne.CanvasObject {
+
+	m.appTabs = container.NewAppTabs(
+		container.NewTabItemWithIcon("Home", theme.HomeIcon(),
+			m.docTab,
+		),
+		container.NewTabItemWithIcon("Log", theme.DocumentIcon(), m.log),
+		container.NewTabItemWithIcon("Help", theme.HelpIcon(), newHelpView(m.e)),
+		container.NewTabItemWithIcon("About", theme.InfoIcon(), aboutView(m.e)),
+		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), newSettingsView(m.e)),
+	)
+
 	split := &container.Split{
 		Offset:     0.90,
 		Horizontal: true,
-		Leading:    container.NewVScroll(m.log),
+		Leading:    m.appTabs,
 		Trailing: container.NewVBox(
 			m.rescanButton,
 			m.portList,
@@ -173,10 +179,8 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.writeButton,
 			m.eraseButton,
 			layout.NewSpacer(),
-			m.helpButton,
 			m.copyButton,
 			m.clearButton,
-			m.settingsButton,
 		),
 	}
 
@@ -211,7 +215,9 @@ func (m *mainWindow) viewClickHandler() {
 						dialog.ShowError(err, m)
 						return
 					}
-					newViewerWindow(m.e, filename, rawbin, false)
+					m.docTab.Append(container.NewTabItemWithIcon(filepath.Base(filename), theme.FileIcon(), newViewerView(m.e, filename, rawbin, false)))
+					m.appTabs.SelectIndex(0)
+					m.docTab.SelectIndex(len(m.docTab.Items) - 1)
 				}
 			}, m)
 			return
@@ -221,7 +227,10 @@ func (m *mainWindow) viewClickHandler() {
 			dialog.ShowError(err, m)
 			return
 		}
-		newViewerWindow(m.e, filename, b, false)
+		d := container.NewTabItemWithIcon(filepath.Base(filename), theme.FileIcon(), newViewerView(m.e, filename, b, false))
+		m.docTab.Append(d)
+		m.appTabs.SelectIndex(0)
+		m.docTab.SelectIndex(len(m.docTab.Items) - 1)
 	}()
 }
 
@@ -243,9 +252,12 @@ func (m *mainWindow) readClickHandler() {
 			if ignoreReadErrors {
 				m.saveFile("Save raw bin file", fmt.Sprintf("cim_raw_%s.bin", time.Now().Format("20060102-150405")), rawBytes)
 			} else {
+				m.appTabs.SelectIndex(1)
 				dialog.ShowConfirm("Error reading CIM", "There was errors reading, view anyway?", func(ok bool) {
 					if ok {
-						newViewerWindow(m.e, fmt.Sprintf("failed read from %s", time.Now().Format(time.RFC1123Z)), rawBytes, true)
+						m.docTab.Append(container.NewTabItemWithIcon(fmt.Sprintf("Raw read at %s", time.Now().Format("15:04:05")), theme.FileIcon(), newViewerView(m.e, fmt.Sprintf("failed read from %s", time.Now().Format(time.RFC1123Z)), rawBytes, true)))
+						m.appTabs.SelectIndex(0)
+						m.docTab.SelectIndex(len(m.docTab.Items) - 1)
 					}
 				}, m)
 			}
@@ -256,8 +268,9 @@ func (m *mainWindow) readClickHandler() {
 			dialog.ShowError(err, m)
 			return
 		}
-
-		newViewerWindow(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)
+		m.docTab.Append(container.NewTabItemWithIcon(fmt.Sprintf("Read at %s", time.Now().Format("15:04:05")), theme.FileIcon(), newViewerView(m.e, fmt.Sprintf("successful read from %s", time.Now().Format(time.RFC1123Z)), xorBytes, true)))
+		m.appTabs.SelectIndex(0)
+		m.docTab.SelectIndex(len(m.docTab.Items) - 1)
 	}()
 }
 
@@ -284,6 +297,7 @@ func (m *mainWindow) writeClickHandler() {
 				defer m.enableButtons()
 				if err := m.writeCIM(m.e.port, bin); err != nil {
 					dialog.ShowError(err, m)
+					m.appTabs.SelectIndex(1)
 					return
 				}
 				dialog.ShowInformation("Write done", fmt.Sprintf("Write successfull, took %s", time.Since(start).Round(time.Millisecond).String()), m)
@@ -318,8 +332,8 @@ func (m *mainWindow) eraseClickHandler() {
 					m.output(err.Error())
 					return
 				}
-
 				m.output("Erase took %s", time.Since(start).String())
+				dialog.ShowInformation("Erase done", fmt.Sprintf("Erase successfull, took %s", time.Since(start).Round(time.Millisecond).String()), m)
 			}()
 
 		}

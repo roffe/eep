@@ -35,28 +35,24 @@ type viewerWindow struct {
 	fyne.Window
 }
 
-var viewWindowSize = fyne.NewSize(550, 320)
-
-func newViewerWindow(e *EEPGui, filename string, data []byte, askSaveOnClose bool) {
+func newViewerView(e *EEPGui, filename string, data []byte, askSaveOnClose bool) fyne.CanvasObject {
 	vw := &viewerWindow{
 		e:      e,
-		Window: e.NewWindow("Viewing " + filename),
 		data:   data,
+		Window: e.mw,
 	}
-	defer vw.Show()
 
 	if bin, err := cim.MustLoadBytes(filename, data); err == nil {
 		vw.cimBin = bin
 	} else {
 		vw.toolbar = vw.newToolbar()
-		vw.SetContent(newHexView(vw))
-		return
+		return container.NewBorder(vw.toolbar, nil, nil, nil,
+			newHexView(vw),
+		)
 	}
 
-	vw.SetCloseIntercept(vw.closeIntercept)
-	vw.SetContent(vw.layout())
-	vw.CenterOnScreen()
-	vw.Resize(viewWindowSize)
+	return vw.layout()
+
 }
 
 func (vw *viewerWindow) save() {
@@ -147,23 +143,24 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 			dialog.ShowError(err, vw)
 			return
 		}
-		vw.SetContent(newHexView(vw))
-		vw.Resize(fyne.NewSize(920, 240))
+		vw.e.mw.docTab.Items[vw.e.mw.docTab.SelectedIndex()].Content = newHexView(vw)
+		//vw.SetContent(newHexView(vw))
+		//vw.Resize(fyne.NewSize(920, 240))
 	})
 
-	homeAction := widget.NewToolbarAction(theme.HomeIcon(), func() {
-		if vw.cimBin != nil {
-			vw.SetContent(vw.layout())
-			vw.Resize(viewWindowSize)
-		}
-	})
+	//homeAction := widget.NewToolbarAction(theme.HomeIcon(), func() {
+	//	if vw.cimBin != nil {
+	//		vw.SetContent(vw.layout())
+	//		vw.Resize(viewWindowSize)
+	//	}
+	//})
 
-	editAction := widget.NewToolbarAction(theme.WarningIcon(), func() {
-		vw.SetContent(newEditView(vw))
-	})
+	//editAction := widget.NewToolbarAction(theme.WarningIcon(), func() {
+	//	vw.SetContent(newEditView(vw))
+	//})
 
 	toolbar := widget.NewToolbar(
-		homeAction,
+		//homeAction,
 		saveAction,
 		widget.NewToolbarSeparator(),
 	)
@@ -173,8 +170,8 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		//toolbar.Append(resetAction)
 		toolbar.Append(hexAction)
 	}
-	toolbar.Append(widget.NewToolbarSpacer())
-	toolbar.Append(editAction)
+	//toolbar.Append(widget.NewToolbarSpacer())
+	//toolbar.Append(editAction)
 	return toolbar
 }
 
@@ -210,7 +207,7 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 				c.Objects[2].(*widget.Label).SetText(vw.cimBin.Keys.Data1[item].Type())
 				c.Objects[3].(*widget.Label).SetText(fmt.Sprintf("%02X", vw.cimBin.Keys.Data1[item].Value))
 				c.Objects[5].(*widget.Button).OnTapped = func() {
-					dialog.ShowCustom("Edit key", "OK", newKeyView(vw.e, vw, item, vw.cimBin), vw)
+					dialog.ShowCustom(fmt.Sprintf("Key #%d", item), "OK", newKeyView(vw.e, vw, item, vw.cimBin), vw)
 				}
 				obj.(*fyne.Container).Objects[6].(*widget.Button).OnTapped = func() {
 					vw.cimBin.Keys.Count1--
@@ -239,7 +236,8 @@ func (vw *viewerWindow) layout() fyne.CanvasObject {
 		),
 	)
 
-	vw.tabs = container.NewAppTabs(vw.infoTab, vw.versionTab, keysTab)
+	hexTab := container.NewTabItemWithIcon("Hex", theme.SearchIcon(), newHexView(vw))
+	vw.tabs = container.NewAppTabs(vw.infoTab, vw.versionTab, keysTab, hexTab)
 
 	return container.NewBorder(vw.toolbar, nil, nil, nil,
 		vw.tabs,
@@ -262,7 +260,7 @@ func hexValidator(length int) func(s string) error {
 func (vw *viewerWindow) renderInfoTab() fyne.CanvasObject {
 	vButton := widget.NewButtonWithIcon("Virginize", theme.SearchReplaceIcon(), func() {
 		vw.cimBin.Unmarry()
-		vw.SetContent(vw.layout())
+		vw.infoTab.Content = vw.renderInfoTab()
 		dialog.ShowInformation("Virginization complete", "The file has been virginized.\nNow flash the eeprom, re-assemble the car and add the CIM with Tech2", vw)
 		vw.askSaveOnClose = true
 		vw.saved = false

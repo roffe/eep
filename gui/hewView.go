@@ -6,14 +6,12 @@ import (
 	"io"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
 func newHexView(vw *viewerWindow) fyne.CanvasObject {
 	grid := &widget.TextGrid{
-		Rows:            generateGrid(vw.data),
-		ShowLineNumbers: false,
+		Rows: generateGrid(vw.data),
 	}
 	/*
 			home := func() {
@@ -30,18 +28,21 @@ func newHexView(vw *viewerWindow) fyne.CanvasObject {
 	*/
 
 	//vw.toolbar.Append(widget.NewToolbarAction(theme.ContentClearIcon(), xorHex))
-	return container.NewBorder(
-		//widget.NewToolbar(
-		//	widget.NewToolbarAction(theme.HomeIcon(), home),
-		//	widget.NewToolbarAction(theme.DocumentSaveIcon(), vw.save),
-		//	widget.NewToolbarAction(theme.ContentClearIcon(), xorHex),
-		//),
-		vw.toolbar,
-		nil,
-		nil,
-		nil,
-		grid,
-	)
+	/*
+		return container.NewBorder(
+			//widget.NewToolbar(
+			//	widget.NewToolbarAction(theme.HomeIcon(), home),
+			//	widget.NewToolbarAction(theme.DocumentSaveIcon(), vw.save),
+			//	widget.NewToolbarAction(theme.ContentClearIcon(), xorHex),
+			//),
+			vw.toolbar,
+			nil,
+			nil,
+			nil,
+			grid,
+		)
+	*/
+	return grid
 }
 
 func generateGrid(data []byte) []widget.TextGridRow {

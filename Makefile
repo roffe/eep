@@ -7,7 +7,8 @@ test:
 gui:
 	rm -f avr/firmware.hex
 	cp firmware/build/firmware.ino.hex avr/firmware.hex
-	fyne package --target windows --icon Icon.png --release
+	GOARCH=amd64 fyne package --target windows --icon Icon.png --release --executable Saab_CIM_Tool_amd64.exe --name Saab_CIM_Tool_amd64
+	GOARCH=386 fyne package --target windows --icon Icon.png --release --executable Saab_CIM_Tool_x86.exe --name Saab_CIM_Tool_x86
 # --appVersion $$(git describe --tags `git rev-list --tags --max-count=1`|cut -d"v" -f2)
 
 

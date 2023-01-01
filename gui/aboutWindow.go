@@ -6,22 +6,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/hirschmann-koxha-gbr/eep/assets"
 )
 
-type aboutWindow struct {
-	fyne.App
-}
-
-func (e *EEPGui) showAboutDialog() {
-	aw := &aboutWindow{App: e.App}
-	dialog.ShowCustom("About", "Close", aw.layout(), e.mw)
-}
-
-func (aw *aboutWindow) layout() fyne.CanvasObject {
-
+func aboutView(aw fyne.App) fyne.CanvasObject {
 	img := &canvas.Image{
 		ScaleMode: canvas.ImageScaleFastest,
 		FillMode:  canvas.ImageFillOriginal,
@@ -32,17 +21,19 @@ func (aw *aboutWindow) layout() fyne.CanvasObject {
 	img.SetMinSize(fyne.NewSize(400, 400))
 
 	return container.NewBorder(
-		img,
+		nil,
 		widget.NewButton("Visit homepage", func() {
 			u, _ := url.Parse("https://hirschmann-koxha.de/en/")
 			aw.OpenURL(u)
 		}),
 		nil,
 		nil,
-		&widget.Label{
-			Text:      "Hirschmann & Koxha GbR",
-			Alignment: fyne.TextAlignCenter,
-		},
-		&widget.Label{Text: ""},
+		container.NewCenter(
+			img,
+			&widget.Label{
+				Text:      "Hirschmann & Koxha GbR",
+				Alignment: fyne.TextAlignCenter,
+			},
+		),
 	)
 }

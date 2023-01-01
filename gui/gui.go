@@ -10,7 +10,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const VERSION = "v2.0.13"
+const VERSION = "v2.0.14"
 
 type EEPGui struct {
 	port            string
