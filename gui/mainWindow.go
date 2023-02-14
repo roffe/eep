@@ -47,7 +47,7 @@ type mainWindow struct {
 	fyne.Window
 }
 
-var mainSize = fyne.NewSize(1200, 600)
+var mainSize = fyne.NewSize(1280, 700)
 
 func newMainWindow(e *EEPGui) *mainWindow {
 	m := &mainWindow{
