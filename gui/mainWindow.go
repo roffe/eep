@@ -162,7 +162,7 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.docTab,
 		),
 		container.NewTabItemWithIcon("Log", theme.DocumentIcon(), m.log),
-		container.NewTabItemWithIcon("Help", theme.HelpIcon(), newHelpView(m.e)),
+		//container.NewTabItemWithIcon("Help", theme.HelpIcon(), newHelpView(m.e)),
 		container.NewTabItemWithIcon("About", theme.InfoIcon(), aboutView(m.e)),
 		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), newSettingsView(m.e)),
 	)
@@ -178,7 +178,22 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.readButton,
 			m.writeButton,
 			m.eraseButton,
+			/*
+				widget.NewButtonWithIcon("Read MIU", theme.DownloadIcon(), func() {
+					b, err := m.readMIU()
+					if err != nil {
+						dialog.ShowError(err, m.Window)
+						return
+					}
+
+					log.Printf("%X", md5.Sum(b))
+					if err := os.WriteFile(time.Now().Format("15_04_05")+".bin", b, 0644); err != nil {
+						dialog.ShowError(err, m.Window)
+					}
+				}),
+			*/
 			layout.NewSpacer(),
+			m.helpButton,
 			m.copyButton,
 			m.clearButton,
 		),
