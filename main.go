@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/theme"
 	"github.com/hirschmann-koxha-gbr/eep/gui"
 )
 
@@ -22,7 +21,7 @@ func main() {
 	application := app.NewWithID("com.cimtool")
 	application.SetIcon(appIcon)
 	//application.Settings().SetTheme(&gui.Theme{})
-	application.Settings().SetTheme(theme.DarkTheme())
+	application.Settings().SetTheme(&gui.MyTheme{})
 	ui, err := gui.New(application)
 	if err != nil {
 		log.Fatal(err)
