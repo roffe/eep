@@ -114,6 +114,10 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		vw.saved = true
 	})
 	writeAction := widget.NewToolbarAction(theme.UploadIcon(), func() {
+		if vw.cimBin == nil {
+			dialog.ShowError(errors.New("Not valid cim eeprom"), vw) //lint:ignore ST1005 ignore this error
+			return
+		}
 		bin, err := vw.cimBin.XORBytes()
 		if err != nil {
 			dialog.ShowError(err, vw)
@@ -136,17 +140,19 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 		}, vw)
 	})
 
-	hexAction := widget.NewToolbarAction(theme.SearchIcon(), func() {
-		var err error
-		vw.data, err = vw.cimBin.Bytes()
-		if err != nil {
-			dialog.ShowError(err, vw)
-			return
-		}
-		vw.e.mw.docTab.Items[vw.e.mw.docTab.SelectedIndex()].Content = newHexView(vw)
-		//vw.SetContent(newHexView(vw))
-		//vw.Resize(fyne.NewSize(920, 240))
-	})
+	/*
+		hexAction := widget.NewToolbarAction(theme.SearchIcon(), func() {
+			var err error
+			vw.data, err = vw.cimBin.Bytes()
+			if err != nil {
+				dialog.ShowError(err, vw)
+				return
+			}
+			vw.e.mw.docTab.Items[vw.e.mw.docTab.SelectedIndex()].Content = newHexView(vw)
+			//vw.SetContent(newHexView(vw))
+			//vw.Resize(fyne.NewSize(920, 240))
+		})
+	*/
 
 	//homeAction := widget.NewToolbarAction(theme.HomeIcon(), func() {
 	//	if vw.cimBin != nil {
@@ -162,14 +168,10 @@ func (vw *viewerWindow) newToolbar() *widget.Toolbar {
 	toolbar := widget.NewToolbar(
 		//homeAction,
 		saveAction,
-		widget.NewToolbarSeparator(),
+		writeAction,
+		//widget.NewToolbarSeparator(),
 	)
 
-	if vw.cimBin != nil {
-		toolbar.Append(writeAction)
-		//toolbar.Append(resetAction)
-		toolbar.Append(hexAction)
-	}
 	//toolbar.Append(widget.NewToolbarSpacer())
 	//toolbar.Append(editAction)
 	return toolbar
