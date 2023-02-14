@@ -66,6 +66,7 @@ func newKeyView(e *EEPGui, vw *viewerWindow, index int, fw *cim.Bin) fyne.Canvas
 		),
 		kv(vw.e.mw, "P1 ISK Hi", "%X", fw.Keys.IskHI1),           // P1 ISK Hi, first 4 bytes
 		kv(vw.e.mw, "P2 ISK Lo", "%X", fw.Keys.IskLO1),           // P2 ISK Lo, 2 bytes reserved and two are remaining ISK bytes
+		kv(vw.e.mw, "P3", "%s", "96AA4854"),                      // P3
 		kv(vw, "P4 PSK Hi", "%X", fw.PSK.High),                   //PSK first 4 bytes (like on cim dump analyzer)
 		kv(vw, "P5 PSK Lo", "%X%X", fw.PSK.High[:2], fw.PSK.Low), // P5 is next two bytes of PSK but prefixed with its first two bytes
 		kv(vw, "P6 PCF", "%s", "6732F2C5"),
