@@ -41,6 +41,8 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 	defer os.Remove("firmware.hex")
 
 	opts := []string{
+		"/C",
+		"avrdude.exe",
 		"-c",
 		"arduino",
 		"-P",
@@ -54,7 +56,7 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 		"flash:w:firmware.hex:i",
 	}
 
-	cmd := exec.Command("./avrdude.exe", opts...)
+	cmd := exec.Command("CMD.exe", opts...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
