@@ -223,7 +223,7 @@ func newSettingsView(e *EEPGui) fyne.CanvasObject {
 			for scanner.Scan() {
 				sw.e.mw.output("%s", scanner.Text())
 			}
-			sw.e.mw.appTabs.SelectIndex(4)
+			sw.e.mw.appTabs.SelectIndex(len(sw.e.mw.appTabs.Items) - 1)
 			dialog.ShowInformation("Update", "Firmware update complete", sw.e.mw)
 		}()
 	})
