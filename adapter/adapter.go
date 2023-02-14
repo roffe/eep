@@ -232,6 +232,15 @@ const (
 	opErase = "e"
 )
 
+func (c *Client) ReadMIU() ([]byte, error) {
+	c.port.ResetInputBuffer()
+	c.port.ResetOutputBuffer()
+	if err := c.sendCMD(opRead, 56, 128, 16, c.rdelay); err != nil {
+		return nil, err
+	}
+	return c.readBytes(256)
+}
+
 func (c *Client) ReadCIM() ([]byte, error) {
 	c.port.ResetInputBuffer()
 	c.port.ResetOutputBuffer()
@@ -282,6 +291,13 @@ func (c *Client) WriteCIM(data []byte) error {
 			if n == 0 {
 				continue
 			}
+
+			if buff[0] == '\a' {
+				c.onError(
+					errors.New("Got nak from adapter"), //lint:ignore ST1005 ignore this
+				)
+			}
+
 			if buff[0] == '\f' {
 				select {
 				case <-sendLock:
@@ -297,9 +313,9 @@ func (c *Client) WriteCIM(data []byte) error {
 	r := bytes.NewReader(data)
 	buffSize := 16
 	buff := make([]byte, buffSize)
-	rb := 0
+	rb := 1
+outer:
 	for i := 0; i < 32; i++ {
-
 		n, err := r.Read(buff)
 		if err != nil {
 			if err == io.EOF {
@@ -315,8 +331,8 @@ func (c *Client) WriteCIM(data []byte) error {
 		select {
 		case sendLock <- struct{}{}:
 		case <-time.After(3 * time.Second):
-			c.onError(errors.New("timeout in sendmutex"))
-
+			c.onError(errors.New("timeout writing"))
+			break outer
 		}
 		if _, err := c.port.Write(buff[:n]); err != nil {
 			return err
@@ -325,7 +341,6 @@ func (c *Client) WriteCIM(data []byte) error {
 
 	done = true
 	time.Sleep(75 * time.Millisecond)
-	c.onProgress(float64(len(data)))
 	return nil
 }
 
