@@ -10,6 +10,7 @@
 
 //  8-bit or 16-bit Data Organisation
 #define ORG_8 8
+#define ORG_16 16
 
 //  EEPROM Operation Codes with Start Bit built in
 #define OP_READ B110

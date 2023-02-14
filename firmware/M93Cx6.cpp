@@ -69,7 +69,13 @@ void M93Cx6::setOrg(uint8_t org)
         _dataLength = 8;
         setChip(_chip);
         if (_orgPin != 0xFF)
-            pinLow(_orgPin);
+            /*if (_orgPin != 0xFF) */ pinLow(_orgPin);
+        break;
+    case ORG_16:
+        _org = org;
+        _dataLength = 16;
+        setChip(_chip);
+        /*if (_orgPin != 0xFF) */ pinHigh(_orgPin);
         break;
     }
 }
