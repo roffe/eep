@@ -4,5 +4,5 @@ Website = "https://hirschmann-koxha.de/"
   Icon = "assets/Icon.png"
   Name = "Saab CIM Tool"
   ID = "com.eep.tool"
-  Version = "2.0.15"
-  Build = 3
+  Version = "2.0.16"
+  Build = 16
