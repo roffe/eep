@@ -99,3 +99,24 @@ func (m *mainWindow) readCIM() ([]byte, *cim.Bin, error) {
 	}
 	return rawBytes, bin, nil
 }
+
+func (m mainWindow) readMIU() ([]byte, error) {
+	client := m.newAdapter()
+	if err := client.Open(m.e.port, VERSION); err != nil {
+		return nil, fmt.Errorf("Failed to init adapter: %v", err) //lint:ignore ST1005 ignore
+	}
+	defer client.Close()
+
+	m.progressBar.Max = 256
+
+	start := time.Now()
+	m.output("Reading MIU ...")
+
+	rawBytes, err := client.ReadMIU()
+	if err != nil {
+		return rawBytes, fmt.Errorf("Failed to read MIU: %w", err) //lint:ignore ST1005 ignore
+	}
+	defer m.output("Read took %s", time.Since(start).String())
+
+	return rawBytes, nil
+}
