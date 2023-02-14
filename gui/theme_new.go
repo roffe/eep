@@ -80,7 +80,7 @@ func (m MyTheme) Size(name fyne.ThemeSizeName) float32 {
 	case theme.SizeNameInlineIcon:
 		return 20
 	case theme.SizeNameInnerPadding:
-		return 2
+		return 8
 	case theme.SizeNameLineSpacing:
 		return 2
 	case theme.SizeNamePadding:
