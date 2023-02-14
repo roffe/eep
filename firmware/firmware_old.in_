@@ -205,9 +205,6 @@ bool setOrg()
     case 8:
         ep.setOrg(ORG_8);
         break;
-    case 16:
-        ep.setOrg(ORG_16);
-        break;
     default:
         Serial.println("\ainvalid org");
         return false;
@@ -254,30 +251,18 @@ void read()
     bufferLength = 0;
     for (uint16_t i = 0; i < cfgSize; i++)
     {
-        uint16_t read = ep.read(i);
-        if (cfgOrg == 8)
+        buffer[bufferLength++] = ep.read(i);
+        buffer[bufferLength] = 0x00;
+        if (bufferLength == BUFF_SIZE)
         {
-            Serial.write(read);
+            ledOn();
+            for (uint8_t j = 0; j < bufferLength; j++)
+            {
+                Serial.write(buffer[j]);
+            }
+            bufferLength = 0;
+            ledOff();
         }
-        else
-        {
-            Serial.write(read >> 8);
-            Serial.write(read & 0xFF);
-        }
-        /*
-                buffer[bufferLength++] = ep.read(i);
-                buffer[bufferLength] = 0x00;
-                if (bufferLength == BUFF_SIZE)
-                {
-                    ledOn();
-                    for (uint8_t j = 0; j < bufferLength; j++)
-                    {
-                        Serial.write(buffer[j]);
-                    }
-                    bufferLength = 0;
-                    ledOff();
-                }
-        */
     }
 }
 
