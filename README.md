@@ -1,6 +1,6 @@
 # Saab CIM Tool
 
-![unit](unit.jpg)
+![Saab CIM Tool](cim_001.jpg)
 
 (image has external led on pin13 & push button from other project hooked up)
 
