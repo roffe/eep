@@ -4,7 +4,7 @@
 
 (image has external led on pin13 & push button from other project hooked up)
 
-## Hardware
+## DIY Hardware
 
 * Arduino UNO
 * breadboard
