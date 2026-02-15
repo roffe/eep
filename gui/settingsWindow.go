@@ -11,7 +11,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/eep/avr"
+	"github.com/roffe/eep/avr"
 )
 
 type settingsWindow struct {

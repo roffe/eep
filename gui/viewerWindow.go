@@ -13,7 +13,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
+	"github.com/roffe/cim/pkg/cim"
 )
 
 type viewerWindow struct {

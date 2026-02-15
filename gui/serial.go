@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
-	"github.com/hirschmann-koxha-gbr/eep/adapter"
+	"github.com/roffe/cim/pkg/cim"
+	"github.com/roffe/eep/adapter"
 )
 
 func (m *mainWindow) newAdapter() *adapter.Client {
@@ -107,7 +107,7 @@ func (m mainWindow) readMIU() ([]byte, error) {
 	}
 	defer client.Close()
 
-	m.progressBar.Max = 256
+	m.progressBar.Max = 128
 
 	start := time.Now()
 	m.output("Reading MIU ...")
@@ -119,4 +119,20 @@ func (m mainWindow) readMIU() ([]byte, error) {
 	defer m.output("Read took %s", time.Since(start).String())
 
 	return rawBytes, nil
+}
+
+func (m *mainWindow) writeMIU(port string, data []byte) error {
+	client := m.newAdapter()
+	if err := client.Open(m.e.port, VERSION); err != nil {
+		return fmt.Errorf("Failed to init adapter: %w", err) //lint:ignore ST1005 ignore
+	}
+	defer client.Close()
+
+	m.progressBar.Max = float64(128)
+
+	if err := client.WriteMIU(data); err != nil {
+		return fmt.Errorf("Failed to write MIU: %w", err) //lint:ignore ST1005 ignore
+	}
+
+	return nil
 }

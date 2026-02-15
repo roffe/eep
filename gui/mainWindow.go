@@ -2,6 +2,7 @@ package gui
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,8 +16,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/cim/pkg/cim"
-	"github.com/hirschmann-koxha-gbr/eep/adapter"
+	"github.com/roffe/cim/pkg/cim"
+	"github.com/roffe/eep/adapter"
 	sdialog "github.com/sqweek/dialog"
 )
 
@@ -41,6 +42,9 @@ type mainWindow struct {
 	copyButton     *widget.Button
 	clearButton    *widget.Button
 	settingsButton *widget.Button
+
+	readMIUButton  *widget.Button
+	writeMIUButton *widget.Button
 
 	progressBar *widget.ProgressBar
 
@@ -148,6 +152,31 @@ func newMainWindow(e *EEPGui) *mainWindow {
 		}
 	})
 
+	m.readMIUButton = widget.NewButtonWithIcon("Read MIU", theme.DownloadIcon(), func() {
+		b, err := m.readMIU()
+		if err != nil {
+			dialog.ShowError(err, m.Window)
+			return
+		}
+
+		m.output("%X", md5.Sum(b))
+
+		if err := os.WriteFile(time.Now().Format("15_04_05")+".bin", b, 0644); err != nil {
+			dialog.ShowError(err, m.Window)
+		}
+	})
+
+	m.writeMIUButton = widget.NewButtonWithIcon("Write MIU", theme.UploadIcon(), func() {
+		b, err := os.ReadFile("128_test.bin")
+		if err != nil {
+			dialog.ShowError(err, m.Window)
+		}
+
+		if err := m.writeMIU(m.e.port, b); err != nil {
+			dialog.ShowError(err, m.Window)
+		}
+	})
+
 	m.SetContent(m.layout())
 	m.Resize(mainSize)
 	m.SetMaster()
@@ -178,20 +207,9 @@ func (m *mainWindow) layout() fyne.CanvasObject {
 			m.readButton,
 			m.writeButton,
 			m.eraseButton,
-			/*
-				widget.NewButtonWithIcon("Read MIU", theme.DownloadIcon(), func() {
-					b, err := m.readMIU()
-					if err != nil {
-						dialog.ShowError(err, m.Window)
-						return
-					}
-
-					log.Printf("%X", md5.Sum(b))
-					if err := os.WriteFile(time.Now().Format("15_04_05")+".bin", b, 0644); err != nil {
-						dialog.ShowError(err, m.Window)
-					}
-				}),
-			*/
+			layout.NewSpacer(),
+			m.readMIUButton,
+			m.writeMIUButton,
 			layout.NewSpacer(),
 			m.helpButton,
 			m.copyButton,

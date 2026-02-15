@@ -5,7 +5,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
-	"github.com/hirschmann-koxha-gbr/eep/assets"
+	"github.com/roffe/eep/assets"
 )
 
 var (

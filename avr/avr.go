@@ -99,7 +99,7 @@ func Update(port, board string, cb func(format string, values ...interface{})) (
 }
 
 func getAvrdudeBytes() error {
-	resp, err := http.Get("https://github.com/mariusgreuel/avrdude/releases/download/v7.0-windows/avrdude-v7.0-windows-windows-x64.zip")
+	resp, err := http.Get("https://github.com/mariusgreuel/avrdude/releases/download/v7.1-windows/avrdude-v7.1-windows-windows-x64.zip")
 	if err != nil {
 		return err
 	}

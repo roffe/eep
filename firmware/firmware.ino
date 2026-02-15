@@ -290,7 +290,7 @@ void write()
     uint16_t writePos = 0;
     for (;;)
     {
-        if ((millis() - lastData) > 500)
+        if ((millis() - lastData) > 1000)
         {
             Serial.println("\adata read timeout");
             break;
@@ -303,9 +303,18 @@ void write()
             lastData = millis();
             if (bufferLength == BUFF_SIZE)
             {
-                for (uint8_t j = 0; j < bufferLength; j++)
+                uint8_t j = 0;
+                while (j < bufferLength)
                 {
-                    ep.write(writePos++, buffer[j]);
+                    if (cfgOrg == 8)
+                    {
+                        ep.write(writePos++, buffer[j++]);
+                    }
+                    else
+                    {
+                        uint16_t number = ((uint16_t)buffer[j++] << 8) | buffer[j++];
+                        ep.write(writePos++, number);
+                    }
                 }
                 Serial.print("\f");
                 bufferLength = 0;

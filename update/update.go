@@ -85,7 +85,7 @@ type Assets struct {
 
 func GetLatest() (*Release, error) {
 	latest := new(Release)
-	b, err := httpGetBody("https://api.github.com/repos/Hirschmann-Koxha-GbR/eep/releases/latest")
+	b, err := httpGetBody("https://api.github.com/repos/roffe/eep/releases/latest")
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func GetLatest() (*Release, error) {
 
 func GetReleases() []*Release {
 	var releases []*Release
-	b, err := httpGetBody("https://api.github.com/repos/Hirschmann-Koxha-GbR/eep/releases")
+	b, err := httpGetBody("https://api.github.com/repos/roffe/eep/releases")
 	if err != nil {
 		return nil
 	}

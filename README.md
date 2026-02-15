@@ -41,3 +41,7 @@ The red cable on the SOP8 clamp indicates pin 1 and should be orinted to the cor
 ## Update firmware
 
     ./avr/avrdude.exe -c arduino -P <port> -b 115200 -p atmega328p -D -U flash:w:firmware/firmware.hex:i
+
+
+## CH340 serial driver
+https://www.arduined.eu/files/windows10/CH341SER.zip

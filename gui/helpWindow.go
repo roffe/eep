@@ -8,8 +8,8 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/eep/assets"
-	"github.com/hirschmann-koxha-gbr/eep/update"
+	"github.com/roffe/eep/assets"
+	"github.com/roffe/eep/update"
 )
 
 var (

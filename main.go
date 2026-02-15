@@ -6,7 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"github.com/hirschmann-koxha-gbr/eep/gui"
+	"github.com/roffe/eep/gui"
 )
 
 //go:embed Icon.png

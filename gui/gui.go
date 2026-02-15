@@ -6,7 +6,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
-	"github.com/hirschmann-koxha-gbr/eep/update"
+	"github.com/roffe/eep/update"
 	"golang.org/x/mod/semver"
 )
 
@@ -85,7 +85,7 @@ func (e *EEPGui) CheckUpdate() {
 	}
 }
 
-var releasepageURL = &url.URL{Scheme: "https", Host: "github.com", Path: "/Hirschmann-Koxha-GbR/eep/releases/latest"}
+var releasepageURL = &url.URL{Scheme: "https", Host: "github.com", Path: "/roffe/eep/releases/latest"}
 
 func (e *EEPGui) openWebpage(ok bool) {
 	if ok {

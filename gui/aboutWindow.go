@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/hirschmann-koxha-gbr/eep/assets"
+	"github.com/roffe/eep/assets"
 )
 
 func aboutView(aw fyne.App) fyne.CanvasObject {
@@ -23,7 +23,7 @@ func aboutView(aw fyne.App) fyne.CanvasObject {
 	return container.NewBorder(
 		nil,
 		widget.NewButton("Visit homepage", func() {
-			u, _ := url.Parse("https://hirschmann-koxha.de/en/")
+			u, _ := url.Parse("https://roffe.nu")
 			aw.OpenURL(u)
 		}),
 		nil,
@@ -31,7 +31,7 @@ func aboutView(aw fyne.App) fyne.CanvasObject {
 		container.NewCenter(
 			img,
 			&widget.Label{
-				Text:      "Hirschmann & Koxha GbR",
+				Text:      "roffe.nu",
 				Alignment: fyne.TextAlignCenter,
 			},
 		),

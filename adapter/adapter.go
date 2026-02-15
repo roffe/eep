@@ -15,6 +15,12 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const (
+	opWrite = "w"
+	opRead  = "r"
+	opErase = "e"
+)
+
 var speeds = []int{57600, 1000000, 115200}
 
 type Client struct {
@@ -118,6 +124,7 @@ func (c *Client) openPort(port, versionString string) error {
 	var adapterVersion string
 	err := retry.Do(func() error {
 		var err error
+		log.Println("Trying to open port", port)
 		sr, err = serial.Open(port, mode)
 		if err != nil {
 			return err
@@ -143,7 +150,7 @@ func (c *Client) openPort(port, versionString string) error {
 		return nil
 	},
 		retry.OnRetry(func(n uint, err error) {
-			c.onMessage(fmt.Sprintf("Trying %dkbp/s", speeds[n]/1000))
+			c.onMessage(fmt.Sprintf("Trying %dkbp/s: %v", speeds[n]/1000, err))
 			mode.BaudRate = speeds[n]
 		}),
 		retry.Attempts(3),
@@ -227,18 +234,99 @@ func (c *Client) readBytes(size int) ([]byte, error) {
 }
 
 const (
-	opWrite = "w"
-	opRead  = "r"
-	opErase = "e"
+	miuSize = 128
+	miuType = 56
+	miuOrg  = 16
 )
 
 func (c *Client) ReadMIU() ([]byte, error) {
 	c.port.ResetInputBuffer()
 	c.port.ResetOutputBuffer()
-	if err := c.sendCMD(opRead, 56, 128, 16, c.rdelay); err != nil {
+	if err := c.sendCMD(opRead, miuType, miuSize, miuOrg, c.rdelay); err != nil {
 		return nil, err
 	}
-	return c.readBytes(256)
+	return c.readBytes(miuSize)
+}
+
+func (c *Client) WriteMIU(data []byte) error {
+	return nil
+	if err := c.sendCMD(opWrite, miuType, miuSize, miuOrg, c.wdelay); err != nil {
+		return err
+	}
+	if err := c.waitAck('\f', 2*time.Second); err != nil {
+		return err
+	}
+
+	c.onProgress(0)
+
+	sendLock := make(chan struct{}, 1)
+	var done bool
+
+	go func() {
+		buff := make([]byte, 1)
+		for !done {
+			n, err := c.port.Read(buff)
+			if err != nil {
+				c.onError(fmt.Errorf("Failed to read from port: %w", err)) //lint:ignore ST1005 ignore this
+				return
+			}
+			if done {
+				return
+			}
+			if n == 0 {
+				continue
+			}
+
+			if buff[0] == '\a' {
+				c.onError(
+					errors.New("Got nak from adapter"), //lint:ignore ST1005 ignore this
+				)
+			}
+
+			if buff[0] == '\f' {
+				select {
+				case <-sendLock:
+				default:
+					c.onError(
+						errors.New("Got a unexpected ack"), //lint:ignore ST1005 ignore this
+					)
+				}
+			}
+		}
+	}()
+
+	r := bytes.NewReader(data)
+	buffSize := 16
+	buff := make([]byte, buffSize)
+	rb := 1
+outer:
+	for i := 0; i < (len(data) / 16); i++ {
+		n, err := r.Read(buff)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		if n != buffSize {
+			return errors.New("invalid size on read")
+		}
+		rb += n
+		c.onProgress(float64(rb))
+		select {
+		case sendLock <- struct{}{}:
+		case <-time.After(3 * time.Second):
+			c.onError(errors.New("timeout writing"))
+			break outer
+		}
+		if _, err := c.port.Write(buff[:n]); err != nil {
+			return err
+		}
+	}
+
+	done = true
+	time.Sleep(75 * time.Millisecond)
+	return nil
 }
 
 func (c *Client) ReadCIM() ([]byte, error) {
@@ -256,7 +344,7 @@ func (c *Client) EraseCIM() error {
 	if err := c.sendCMD(opErase, 66, 512, 8, c.wdelay); err != nil {
 		return err
 	}
-	if err := c.waitAck('\a', 2*time.Second); err != nil {
+	if err := c.waitAck('\a', 200*time.Second); err != nil {
 		return err
 	}
 	time.Sleep(20 * time.Millisecond)
