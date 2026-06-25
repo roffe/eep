@@ -22,7 +22,7 @@ func newHelpWindow(e *EEPGui) fyne.Window {
 		container.NewVScroll(
 			container.NewVBox(
 				widget.NewLabelWithStyle("To access the storage of your CIM, you need to connect your SOP8 clip to the EEPROM", fyne.TextAlignCenter, fyne.TextStyle{}),
-				container.NewCenter(container.NewMax(&canvas.Image{
+				container.NewCenter(container.NewStack(&canvas.Image{
 					ScaleMode: canvas.ImageScaleFastest,
 					FillMode:  canvas.ImageFillOriginal,
 					Resource: &fyne.StaticResource{
@@ -90,11 +90,13 @@ func newHelpWindow(e *EEPGui) fyne.Window {
 		}
 	})
 
-	changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
-		container.NewVScroll(
-			container.NewVBox(changesContent...),
-		),
-	)
+	/*
+		changesTab := container.NewTabItemWithIcon("Changelog", theme.InfoIcon(),
+			container.NewVScroll(
+				container.NewVBox(changesContent...),
+			),
+		)
+	*/
 
 	w := e.NewWindow("Help")
 	w.SetOnClosed(func() {
@@ -105,7 +107,7 @@ func newHelpWindow(e *EEPGui) fyne.Window {
 		introTab,
 		failedTab,
 		settingsTab,
-		changesTab,
+		//changesTab,
 	))
 	w.Resize(fyne.NewSize(920, 800))
 	w.Show()

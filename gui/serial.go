@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"github.com/roffe/cim/pkg/cim"
 	"github.com/roffe/eep/adapter"
 )
@@ -13,7 +14,7 @@ func (m *mainWindow) newAdapter() *adapter.Client {
 		m.output(msg)
 	}
 	onProgress := func(progress float64) {
-		m.progressBar.SetValue(progress)
+		fyne.Do(func() { m.progressBar.SetValue(progress) })
 	}
 	onError := func(err error) {
 		m.output(err.Error())
@@ -47,28 +48,10 @@ func (m *mainWindow) writeCIM(port string, data []byte) error {
 	}
 	defer client.Close()
 
-	m.progressBar.Max = float64(len(xorBytes))
+	fyne.Do(func() { m.progressBar.Max = float64(len(xorBytes)) })
 
 	if err := client.WriteCIM(xorBytes); err != nil {
 		return fmt.Errorf("Failed to write CIM: %w", err) //lint:ignore ST1005 ignore
-	}
-
-	if verify, err := m.e.verifyWrite.Get(); verify && err == nil {
-		time.Sleep(200 * time.Millisecond)
-		rawBytes, err := client.ReadCIM()
-		if err != nil {
-			return fmt.Errorf("Failed to read CIM: %w", err) //lint:ignore ST1005 ignore
-		}
-		readback, err := cim.MustLoadBytes("read.bin", rawBytes)
-		if err != nil {
-			return fmt.Errorf("Failed to load CIM: %w", err) //lint:ignore ST1005 ignore
-		}
-
-		if input.MD5() == readback.MD5() && input.CRC32() == readback.CRC32() {
-			m.output("Write verified OK")
-		} else {
-			m.output("Write verify failed")
-		}
 	}
 	return nil
 }
@@ -80,7 +63,7 @@ func (m *mainWindow) readCIM() ([]byte, *cim.Bin, error) {
 	}
 	defer client.Close()
 
-	m.progressBar.Max = 512
+	fyne.Do(func() { m.progressBar.Max = 512 })
 
 	start := time.Now()
 	m.output("Reading CIM ...")
@@ -107,7 +90,7 @@ func (m mainWindow) readMIU() ([]byte, error) {
 	}
 	defer client.Close()
 
-	m.progressBar.Max = 128
+	fyne.Do(func() { m.progressBar.Max = 128 })
 
 	start := time.Now()
 	m.output("Reading MIU ...")
@@ -128,7 +111,7 @@ func (m *mainWindow) writeMIU(port string, data []byte) error {
 	}
 	defer client.Close()
 
-	m.progressBar.Max = float64(128)
+	fyne.Do(func() { m.progressBar.Max = float64(128) })
 
 	if err := client.WriteMIU(data); err != nil {
 		return fmt.Errorf("Failed to write MIU: %w", err) //lint:ignore ST1005 ignore

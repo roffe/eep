@@ -15,8 +15,8 @@ func aboutView(aw fyne.App) fyne.CanvasObject {
 		ScaleMode: canvas.ImageScaleFastest,
 		FillMode:  canvas.ImageFillOriginal,
 		Resource: &fyne.StaticResource{
-			StaticName:    "hk.png",
-			StaticContent: assets.HkBytes},
+			StaticName:    "logo.png",
+			StaticContent: assets.LogoBytes},
 	}
 	img.SetMinSize(fyne.NewSize(400, 400))
 

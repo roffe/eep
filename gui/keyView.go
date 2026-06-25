@@ -57,11 +57,11 @@ func newKeyView(e *EEPGui, vw *viewerWindow, index int, fw *cim.Bin) fyne.Canvas
 	return container.NewVBox(
 		kv(vw, "Type", "%s", fw.Keys.Data1[index].Type()),
 		container.NewHBox(
-			newBoldEntry("P0 IDE"),
-			container.NewBorder(nil, nil, nil, nil, ideEntry),
+			fixedWidth(100, newBoldEntry("P0 IDE:")),
+			fixedWidth(100, ideEntry),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				e.mw.Clipboard().SetContent(ideEntry.Text)
+				e.App.Clipboard().SetContent(ideEntry.Text)
 			}),
 		),
 		kv(vw.e.mw, "P1 ISK Hi", "%X", fw.Keys.IskHI1),           // P1 ISK Hi, first 4 bytes
@@ -71,11 +71,11 @@ func newKeyView(e *EEPGui, vw *viewerWindow, index int, fw *cim.Bin) fyne.Canvas
 		kv(vw, "P5 PSK Lo", "%X%X", fw.PSK.High[:2], fw.PSK.Low), // P5 is next two bytes of PSK but prefixed with its first two bytes
 		kv(vw, "P6 PCF", "%s", "6732F2C5"),
 		container.NewHBox(
-			newBoldEntry("P7 Sync"),
-			container.NewBorder(nil, nil, nil, nil, syncEntry),
+			fixedWidth(100, newBoldEntry("P7 Sync:")),
+			fixedWidth(100, syncEntry),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-				e.mw.Clipboard().SetContent(syncEntry.Text)
+				e.App.Clipboard().SetContent(syncEntry.Text)
 			}),
 		),
 	)

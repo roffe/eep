@@ -21,7 +21,7 @@ func viewColor(pos int) color.RGBA {
 }
 
 func rgb(r, g, b uint8) color.RGBA {
-	return color.RGBA{R: r, G: g, B: b, A: 1}
+	return color.RGBA{R: r, G: g, B: b, A: 255}
 }
 
 var (

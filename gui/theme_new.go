@@ -63,7 +63,7 @@ func (m MyTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 
 func (m MyTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	if name == theme.IconNameHome {
-		fyne.NewStaticResource("myHome", assets.HkBytes)
+		fyne.NewStaticResource("myHome", assets.LogoBytes)
 	}
 
 	return theme.DefaultTheme().Icon(name)

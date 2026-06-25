@@ -18,7 +18,6 @@ type settingsWindow struct {
 	e                *EEPGui
 	hwVerSelect      *widget.Select
 	ignoreError      *widget.Check
-	verifyWrite      *widget.Check
 	readSliderLabel  *widget.Label
 	readSlider       *widget.Slider
 	writeSliderLabel *widget.Label
@@ -42,7 +41,6 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 			e.Preferences().SetString("hardware_version", s)
 		}),
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.ignoreError),
-		verifyWrite:      widget.NewCheckWithData("Verify written data", e.verifyWrite),
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(0, 255, e.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
@@ -66,11 +64,6 @@ func newSettingsWindow(e *EEPGui) *settingsWindow {
 	sw.ignoreError.OnChanged = func(b bool) {
 		sw.e.Preferences().SetBool("ignore_read_errors", b)
 		sw.e.ignoreError.Set(b)
-	}
-
-	sw.verifyWrite.OnChanged = func(b bool) {
-		sw.e.Preferences().SetBool("verify_write", b)
-		sw.e.verifyWrite.Set(b)
 	}
 
 	sw.readSlider.OnChanged = func(f float64) {
@@ -127,7 +120,6 @@ func (sw *settingsWindow) layout() fyne.CanvasObject {
 		//},
 		container.NewHBox(widget.NewLabel("Arduino"), sw.hwVerSelect),
 		sw.ignoreError,
-		sw.verifyWrite,
 		sw.readSliderLabel,
 		sw.readSlider,
 		sw.writeSliderLabel,
@@ -156,7 +148,6 @@ func newSettingsView(e *EEPGui) fyne.CanvasObject {
 			e.Preferences().SetString("hardware_version", s)
 		}),
 		ignoreError:      widget.NewCheckWithData("Ignore read validation errors", e.ignoreError),
-		verifyWrite:      widget.NewCheckWithData("Verify written data", e.verifyWrite),
 		readSliderLabel:  widget.NewLabel(""),
 		readSlider:       widget.NewSliderWithData(0, 255, e.readDelayValue),
 		writeSliderLabel: widget.NewLabel(""),
@@ -182,11 +173,6 @@ func newSettingsView(e *EEPGui) fyne.CanvasObject {
 		sw.e.ignoreError.Set(b)
 	}
 
-	sw.verifyWrite.OnChanged = func(b bool) {
-		sw.e.Preferences().SetBool("verify_write", b)
-		sw.e.verifyWrite.Set(b)
-	}
-
 	sw.readSlider.OnChanged = func(f float64) {
 		sw.readSliderLabel.SetText(delayLabel("Read", f))
 		sw.e.Preferences().SetFloat("read_pin_delay", f)
@@ -203,8 +189,8 @@ func newSettingsView(e *EEPGui) fyne.CanvasObject {
 		sw.updateButton.Disable()
 		sw.e.mw.disableButtons()
 		go func() {
-			sw.e.mw.appTabs.SelectIndex(1)
-			defer sw.updateButton.Enable()
+			fyne.Do(func() { sw.e.mw.appTabs.SelectIndex(1) })
+			defer fyne.Do(sw.updateButton.Enable)
 			defer sw.e.mw.enableButtons()
 
 			hwVer, err := sw.e.hwVersion.Get()
@@ -223,8 +209,10 @@ func newSettingsView(e *EEPGui) fyne.CanvasObject {
 			for scanner.Scan() {
 				sw.e.mw.output("%s", scanner.Text())
 			}
-			sw.e.mw.appTabs.SelectIndex(len(sw.e.mw.appTabs.Items) - 1)
-			dialog.ShowInformation("Update", "Firmware update complete", sw.e.mw)
+			fyne.Do(func() {
+				sw.e.mw.appTabs.SelectIndex(len(sw.e.mw.appTabs.Items) - 1)
+				dialog.ShowInformation("Update", "Firmware update complete", sw.e.mw)
+			})
 		}()
 	})
 

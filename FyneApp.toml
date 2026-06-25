@@ -1,8 +1,11 @@
 Website = "https://roffe.nu/"
 
 [Details]
-  Icon = "assets/Icon.png"
-  Name = "Saab CIM Tool"
-  ID = "com.eep.tool"
-  Version = "2.0.17"
-  Build = 26
+Icon = "assets/Icon.png"
+Name = "Saab CIM Tool"
+ID = "com.eep.tool"
+Version = "2.0.17"
+Build = 27
+
+[Migrations]
+fyneDo = true

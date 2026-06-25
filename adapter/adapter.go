@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	opWrite = "w"
-	opRead  = "r"
-	opErase = "e"
+	opWrite    = "w"
+	opRead     = "r"
+	opErase    = "e"
+	opChecksum = "c"
 )
 
 var speeds = []int{57600, 1000000, 115200}
@@ -329,6 +330,60 @@ outer:
 	return nil
 }
 
+// Fletcher16 computes the Fletcher-16 checksum, matching the adapter firmware
+// so a read or write can be verified against ChecksumCIM.
+func Fletcher16(data []byte) uint16 {
+	var sum1, sum2 uint16
+	for _, b := range data {
+		sum1 = (sum1 + uint16(b)) % 255
+		sum2 = (sum2 + sum1) % 255
+	}
+	return sum2<<8 | sum1
+}
+
+// ChecksumCIM asks the adapter for the Fletcher-16 checksum of the chip
+// contents. Compare against Fletcher16(localData) to verify.
+func (c *Client) ChecksumCIM() (uint16, error) {
+	c.port.ResetInputBuffer()
+	c.port.ResetOutputBuffer()
+	if err := c.sendCMD(opChecksum, 66, 512, 8, c.rdelay); err != nil {
+		return 0, err
+	}
+	line, err := readLine(c.port, 2*time.Second)
+	if err != nil {
+		return 0, err
+	}
+	var sum uint16
+	if _, err := fmt.Sscanf(line, "%04X", &sum); err != nil {
+		return 0, fmt.Errorf("bad checksum response %q: %w", line, err)
+	}
+	return sum, nil
+}
+
+func readLine(stream serial.Port, timeout time.Duration) (string, error) {
+	start := time.Now()
+	var line []byte
+	buf := make([]byte, 8)
+	for {
+		if time.Since(start) > timeout {
+			return "", errors.New("Got no response from adapter") //lint:ignore ST1005 ignore this
+		}
+		n, err := stream.Read(buf)
+		if err != nil {
+			return "", err
+		}
+		if n == 0 {
+			continue
+		}
+		for _, b := range buf[:n] {
+			if b == '\n' {
+				return strings.TrimRight(string(line), "\r"), nil
+			}
+			line = append(line, b)
+		}
+	}
+}
+
 func (c *Client) ReadCIM() ([]byte, error) {
 	c.port.ResetInputBuffer()
 	c.port.ResetOutputBuffer()
@@ -344,7 +399,7 @@ func (c *Client) EraseCIM() error {
 	if err := c.sendCMD(opErase, 66, 512, 8, c.wdelay); err != nil {
 		return err
 	}
-	if err := c.waitAck('\a', 200*time.Second); err != nil {
+	if err := c.waitAck('\a', 200*time.Millisecond); err != nil {
 		return err
 	}
 	time.Sleep(20 * time.Millisecond)
@@ -428,8 +483,37 @@ outer:
 	}
 
 	done = true
-	time.Sleep(75 * time.Millisecond)
+	time.Sleep(75 * time.Millisecond) // let the reader goroutine exit
+	c.drain(200 * time.Millisecond)   // swallow the final ack + "--- write done ---"
+
+	// Verify the write by comparing the adapter's checksum against the data.
+	want := Fletcher16(data)
+	got, err := c.ChecksumCIM()
+	if err != nil {
+		return fmt.Errorf("write verification failed: %w", err)
+	}
+	if got != want {
+		return fmt.Errorf("write verification mismatch: adapter %04X, expected %04X", got, want) //lint:ignore ST1005 ignore this
+	}
+	c.onMessage("Write verified OK")
 	return nil
+}
+
+// drain reads and discards everything from the port until it stays quiet for
+// the given duration, so trailing bytes from a prior command don't leak into
+// the next read.
+func (c *Client) drain(quiet time.Duration) {
+	last := time.Now()
+	buf := make([]byte, 64)
+	for time.Since(last) < quiet {
+		n, err := c.port.Read(buf)
+		if err != nil {
+			return
+		}
+		if n > 0 {
+			last = time.Now()
+		}
+	}
 }
 
 func (c *Client) waitAck(char byte, timeout time.Duration) error {

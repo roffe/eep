@@ -10,9 +10,8 @@ import (
 )
 
 func newHexView(vw *viewerWindow) fyne.CanvasObject {
-	grid := &widget.TextGrid{
-		Rows: generateGrid(vw.data),
-	}
+	grid := widget.NewTextGrid()
+	grid.Rows = generateGrid(vw.data)
 	/*
 			home := func() {
 				vw.w.SetContent(vw.layout())

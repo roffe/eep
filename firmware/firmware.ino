@@ -8,7 +8,7 @@
 #define DO_PIN 12
 #define ORG_PIN 8
 
-#define WIRE_VERSION "v2.0.16\n"
+#define WIRE_VERSION "v2.0.17\n"
 
 M93Cx6 ep = M93Cx6(PWR_PIN, CS_PIN, SK_PIN, DO_PIN, DI_PIN, ORG_PIN, 150);
 
@@ -95,6 +95,7 @@ void handleCmd()
     case 'r':
     case 'e':
     case 'p':
+    case 'c':
     case 'x':
         break;
     case '?':
@@ -108,7 +109,10 @@ void handleCmd()
 
     if (bufferLength > 8) // parse long command with set options inline
     {
-        parseBuffer();
+        if (!parseBuffer())
+        {
+            return;
+        }
     }
 
     ep.powerUp();
@@ -127,48 +131,72 @@ void handleCmd()
     case 'e':
         erase();
         break;
+    case 'c':
+        checksum();
+        break;
     }
     ep.powerDown();
 }
 
-void parseBuffer()
+bool parseBuffer()
 {
-    char *cmd;
     char *pos;
-    cmd = strtok(buffer, ",");
+    strtok(buffer, ","); // command token
 
     pos = strtok(NULL, ",");
+    if (pos == NULL)
+    {
+        Serial.println("\ainvalid command");
+        return false;
+    }
     cfgChip = atoi(pos);
 
     pos = strtok(NULL, ",");
+    if (pos == NULL)
+    {
+        Serial.println("\ainvalid command");
+        return false;
+    }
     cfgSize = atoi(pos);
 
     pos = strtok(NULL, ",");
+    if (pos == NULL)
+    {
+        Serial.println("\ainvalid command");
+        return false;
+    }
     cfgOrg = atoi(pos);
 
     pos = strtok(NULL, ",");
+    if (pos == NULL)
+    {
+        Serial.println("\ainvalid command");
+        return false;
+    }
     cfgDelay = atoi(pos);
 
     if (cfgSize == 0)
     {
         Serial.println("\ainvalid size");
-        return;
+        return false;
     }
 
     if (!setChip())
     {
-        return;
+        return false;
     }
 
     if (!setOrg())
     {
-        return;
+        return false;
     }
 
     if (!setDelay())
     {
-        return;
+        return false;
     }
+
+    return true;
 }
 
 bool setChip()
@@ -231,6 +259,7 @@ void help()
     Serial.println("w - Initiate write mode");
     Serial.println("e - Erase eeprom");
     Serial.println("p - Hex print eeprom content");
+    Serial.println("c - Print Fletcher-16 checksum of eeprom");
     Serial.println("h - This help");
     Serial.println("v - Print version");
 }
@@ -312,7 +341,9 @@ void write()
                     }
                     else
                     {
-                        uint16_t number = ((uint16_t)buffer[j++] << 8) | buffer[j++];
+                        uint8_t hi = (uint8_t)buffer[j++];
+                        uint8_t lo = (uint8_t)buffer[j++];
+                        uint16_t number = ((uint16_t)hi << 8) | lo;
                         ep.write(writePos++, number);
                     }
                 }
@@ -338,10 +369,37 @@ void erase()
     Serial.println("\aeeprom erased");
 }
 
+// checksum streams the chip through a Fletcher-16, reading bytes in the same
+// order as read() sends them so the client can verify a read/write.
+void checksum()
+{
+    uint16_t sum1 = 0;
+    uint16_t sum2 = 0;
+    for (uint16_t i = 0; i < cfgSize; i++)
+    {
+        uint16_t v = ep.read(i);
+        if (cfgOrg == 8)
+        {
+            sum1 = (sum1 + (v & 0xFF)) % 255;
+            sum2 = (sum2 + sum1) % 255;
+        }
+        else
+        {
+            sum1 = (sum1 + (v >> 8)) % 255;
+            sum2 = (sum2 + sum1) % 255;
+            sum1 = (sum1 + (v & 0xFF)) % 255;
+            sum2 = (sum2 + sum1) % 255;
+        }
+    }
+    char buf[6];
+    sprintf(buf, "%04X\n", (uint16_t)((sum2 << 8) | sum1));
+    Serial.print(buf);
+}
+
 void printBin()
 {
     uint8_t linePos = 0;
-    char buf[3];
+    char buf[4];
     ledOn();
     Serial.println("--- Hex dump ---");
     for (uint16_t i = 0; i < cfgSize; i++)
