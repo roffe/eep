@@ -61,7 +61,6 @@ jobs:
           7z a Saab_CIM_Tool_x86.zip Saab_CIM_Tool_x86.exe
 
       - name: Delete previous nightly release
-        if: github.ref == 'refs/heads/develop'
         working-directory: eep
         run: |
           gh release view nightly 2>$null
@@ -75,7 +74,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish nightly release
-        if: github.ref == 'refs/heads/develop'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: nightly
