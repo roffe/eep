@@ -2,6 +2,8 @@ module github.com/roffe/eep
 
 go 1.25.0
 
+replace github.com/roffe/cim => ../cim
+
 require (
 	github.com/avast/retry-go/v4 v4.3.1
 	github.com/cheggaaa/pb/v3 v3.0.8
